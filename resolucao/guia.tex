@@ -1,0 +1,423 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,graphicx,float,multirow,longtable}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black}
+\setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
+\setlist{itemsep=2pt,topsep=2pt}
+\newcommand{\Vc}[1]{V_{c#1}}
+\newcommand{\Vin}{V_{in}}
+\newtcolorbox{dica}{colback=blue!4,colframe=blue!50!black,title=Dica / por que,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{esp}{colback=green!5,colframe=green!40!black,title=O que você deve ver (simulação),fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{alerta}{colback=red!5,colframe=red!60!black,title=Atenção,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{parm}{colback=orange!6,colframe=orange!60!black,title=Parâmetros,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,frame=single,columns=fullflexible,keepspaces=true,
+ literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c c}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {Á}{{\'A}}1 {É}{{\'E}}1}
+\newcommand{\chk}{$\square$\ }
+
+\begin{document}
+\begin{center}
+{\LARGE\bfseries Guia de estudo e roteiro de bancada}\\[4pt]
+{\Large Segunda Avaliação de Controle de Processos --- Circuito G ($\Vc3/\Vin$)}\\[6pt]
+Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR
+\end{center}
+\begin{tcolorbox}[colback=gray!6,colframe=gray!60]
+\textbf{Para que serve.} \textbf{Parte I} = estudo (o que entender, fórmulas, perguntas prováveis, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{Resolução detalhada} (arquivo \texttt{Resolucao\_Prova2\_detalhada.pdf}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
+\textbf{Limite honesto:} os detalhes de tela do OpenPLC/ScadaBR e o mapeamento dos pinos dependem do ambiente montado pelo professor. Onde eu não sei, está escrito ``confirme no seu ambiente''.
+\end{tcolorbox}
+\tableofcontents
+\newpage
+
+%=====================================================================
+\part{Guia de estudo}
+\section{Como a avaliação funciona e como se preparar}
+\begin{itemize}
+\item Sorteiam \textbf{uma questão (1 a 4) e um item}. Você reproduz o experimento na bancada consultando o seu relatório. Se algo der errado, há nova data com novo sorteio.
+\item Questões: \textbf{1} = PID por Tabela 7-4.1 (1.1), bumpless VP-tracking (1.2), anti reset windup (1.3); \textbf{2} = PID2GL com $\alpha$ (2.1) e distúrbio com $R_p$ (2.2); \textbf{3} = integral do erro mínimo, seção 7-2.3 (3.1); \textbf{4} = Ziegler--Nichols, Tabela 7-1.1 (4.1) e I\_PD (4.2).
+\item Em \textbf{todos} os casos: confrontar \textbf{VP exp.\ $\times$ simulada} e \textbf{SC exp.\ $\times$ simulado}.
+\item Como todos os itens usam a mesma planta, o que muda de item para item é só: parâmetros $(K_p,T_i,T_d)$, o degrau aplicado e um ``truque'' (sem tracking, sem anti-windup, $R_p$, I\_PD). Decore a \textbf{tabela de parâmetros} (Seção~\ref{tabpar}) e o \textbf{degrau de cada item}.
+\end{itemize}
+\textbf{Plano de estudo sugerido (3 blocos):}
+\begin{enumerate}
+\item \emph{Entender a cadeia toda:} modelo $\to$ identificação $\to$ sintonia $\to$ validação (Seção~\ref{cadeia}).
+\item \emph{Saber refazer à mão} cada sintonia em 2 minutos com calculadora (exercícios da Seção~\ref{exerc}).
+\item \emph{Ensaiar a bancada} seguindo a Parte II até conseguir montar e gravar um item em menos de 40 minutos.
+\end{enumerate}
+
+\section{A cadeia de ideias (o ``mapa mental'')}\label{cadeia}
+\begin{enumerate}
+\item \textbf{Modelo físico:} 3 capacitores e 4 resistores $\Rightarrow$ 3 estados $\Rightarrow$ FT de 3ª ordem com polos reais ($68{,}7$; $16{,}0$; $10{,}4$ s). Ganhos: divisores resistivos ($K_3=R_4/R_t=0{,}397$).
+\item \textbf{Interatividade:} cada capacitor realimenta o vizinho ($\beta_1,\beta_2$); por isso os polos reais são diferentes das constantes $R_jC_j$ isoladas.
+\item \textbf{Redução (identificação):} da curva ao degrau tira-se $K$, $\tau$, $t_0$. Curva C (sem inflexão, $\Vc1$): $\tau=t_{63,2}$. Curva S ($\Vc2$, $\Vc3$): Smith.
+\item \textbf{Bode e margens:} a FOPDT acerta a margem de fase em baixos $K_c$ e \emph{subestima} a margem de ganho (conservadora).
+\item \textbf{Sintonias:} Dahlin (1.1), 2GL com $\alpha$ (2.1), IAE mínimo (3.1), Z--N (4.1). As três primeiras usam a FOPDT; Z--N usa $K_{cu}$ e $T_u$ da planta real.
+\item \textbf{Problemas práticos da implementação:} bumpless/VP-tracking (1.2), anti reset windup (1.3), distúrbio (2.2), estrutura I\_PD (4.2).
+\end{enumerate}
+
+\section{Cola de fórmulas}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.5}
+\begin{longtable}{p{3.6cm}p{11.2cm}}
+\toprule \textbf{Assunto} & \textbf{Fórmula}\\\midrule\endhead
+Ganho estático & $K_3=R_4/R_t=66{,}8/168{,}2=0{,}3971$; medido $K=(y_f-y_i)/\Delta U=0{,}3918$\\
+Curva C & $t_0=0$, $\tau=t_{63,2}$\\
+Smith (28,3/63,2) & $\tau=1{,}5(t_{63,2}-t_{28,3})$,\quad $t_0=t_{63,2}-\tau$\\
+Sundaresan (35,3/85,3) & $\tau=0{,}67(t_{85,3}-t_{35,3})$,\quad $t_0=1{,}3t_{35,3}-0{,}29t_{85,3}$\\
+Tangente & $t_0=t_i-y_i/m$,\quad $\tau=t_i+(1-y_i)/m-t_0$\\
+Padé 3ª ordem & $e^{-t_0s}\approx\dfrac{1-\frac{t_0s}2+\frac{(t_0s)^2}{10}-\frac{(t_0s)^3}{120}}{1+\frac{t_0s}2+\frac{(t_0s)^2}{10}+\frac{(t_0s)^3}{120}}$\\
+Ganho final (Routh, 3ª ordem) & $K_{cu}=\dfrac{a_2a_1/a_3-1}{K}$,\ \ $\omega_u=\sqrt{a_1/a_3}$,\ \ $T_u=2\pi/\omega_u$\\
+PI\_D paralelo (OpenPLC) & $U=(K_p+K_i/s)(R-Y)-\dfrac{K_ds}{\mu T_ds+1}Y$,\ $K_i=K_p/T_i$,\ $K_d=K_pT_d$,\ $\mu=0{,}1$\\
+Série $\to$ ideal & $K_p=K_c'(1+\tau_D'/\tau_I')$,\ $T_i=\tau_I'+\tau_D'$,\ $T_d=\dfrac{\tau_I'\tau_D'}{\tau_I'+\tau_D'}$\\
+Tabela 7-4.1 (Dahlin) & $K_c'=\dfrac{\tau}{K(t_0+\tau_c)}$,\ $\tau_I'=\tau$,\ $\tau_D'=t_0/2$ \ $\Leftrightarrow$\ $K_p=\dfrac{2\tau+t_0}{2K(\tau_c+t_0)}$,\ $T_i=\tau+\frac{t_0}2$,\ $T_d=\dfrac{\tau t_0}{2\tau+t_0}$\\
+Z--N 1/4 (7-1.1) & $K_c'=K_{cu}/1{,}7$,\ $\tau_I'=T_u/2$,\ $\tau_D'=T_u/8$\ $\Rightarrow$\ $K_p=0{,}735K_{cu}$,\ $T_i=0{,}625T_u$,\ $T_d=0{,}1T_u$\\
+2GL & $C_f=\dfrac{(1-\alpha)T_is+1}{T_is+1}$ (só no SP);\ $VP/D$ não depende de $\alpha$\\
+IAE ponto fixo (7-2.3) & $r=t_0/\tau$;\ $K_c=\frac{1{,}086}{K}r^{-0{,}869}$,\ $\tau_I=\frac{\tau}{0{,}740-0{,}130r}$,\ $\tau_D=0{,}348\tau r^{0{,}914}$\\
+Malha fechada & $\dfrac YR=\dfrac{PI\,G}{1+(PI+D)G}$,\ \ $\dfrac UR=\dfrac{PI}{1+(PI+D)G}$\\
+SC em regime & $SC=SP/K$ (ex.: $20/0{,}3918=51{,}0\,\%$)\\
+Salto do SC no degrau de SP & $\Delta SC_{0^+}=K_p\,\Delta SP$ (derivada na VP não dá ``chute'')\\
+\bottomrule
+\end{longtable}\end{center}
+
+\section{Tabela de parâmetros prontos}\label{tabpar}
+\begin{center}\small
+\begin{tabular}{llccccc}\toprule Item & Sintonia & $K_p$ & $T_i$ [s] & $T_d$ [s] & $K_i$ & $K_d$\\\midrule
+1.1 & Dahlin $\tau_c=40$ & 3,523 & 90,99 & 11,11 & 0,03872 & 39,15\\
+1.2, 1.3 & (use a do 1.1) & 3,523 & 90,99 & 11,11 & 0,03872 & 39,15\\
+2.1 & regulatório $\tau_c=20$, $\alpha=0{,}64$ & 5,057 & 90,99 & 11,11 & 0,05558 & 56,21\\
+2.2 & (a do 2.1) & 5,057 & 90,99 & 11,11 & 0,05558 & 56,21\\
+3.1 & IAE ponto fixo & 7,222 & 111,98 & 9,92 & 0,06449 & 71,63\\
+4.1, 4.2 & Z--N ($K_{cu}=38{,}97$; $T_u=68{,}85$) & 28,65 & 43,03 & 6,885 & 0,6659 & 197,3\\\bottomrule
+\end{tabular}\end{center}
+Todos com $\mu=0{,}1$. \textbf{Se na bancada o $K_{cu}$ e o $T_u$ medidos forem diferentes, recalcule o 4.1 com as fórmulas $K_p=0{,}735K_{cu}$, $T_i=0{,}625T_u$, $T_d=0{,}1T_u$.}
+
+\section{Perguntas prováveis e respostas curtas}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Por que $K<1$ e por que $K_3<K_2<K_1$?} Divisor resistivo em regime (capacitores abertos): cada tensão é a fração da resistência que fica ``depois'' do nó. $K_3=R_4/R_t$ é a menor.
+\item \textbf{O que é interatividade?} A tensão de cada capacitor afeta o vizinho (corrente por $R_2$ e $R_3$ volta ao nó anterior); o diagrama de blocos tem realimentações $\beta_1=0{,}32$ ($\Vc2\to\Vc1$) e $\beta_2=0{,}59$ ($\Vc3\to\Vc2$). Efeito: afasta as constantes de tempo (a menor fica menor, a maior fica maior).
+\item \textbf{Como saber se a curva é C ou S sem desenhar?} Pelo grau relativo: 1 $\to$ C (inclinação inicial $\ne0$); $\ge2$ $\to$ S (inflexão).
+\item \textbf{Por que Smith para $\Vc3$ e não tipo C?} Tipo C (RMS 4,9\,\%) ignora o atraso inicial; Smith (RMS 1,1\,\%) usa dois pontos no meio da subida e dá $t_0=25{,}9$ s.
+\item \textbf{Por que a FOPDT subestima $K_{cu}$?} O atraso puro $e^{-t_0s}$ faz a fase cair sem limite; a planta real satura em $-270^\circ$ ($\Vc3$). Logo a FOPDT cruza $-180^\circ$ antes ($K_{cu}=13{,}7$ contra $39{,}0$).
+\item \textbf{Por que então sintonizar com a FOPDT?} É conservadora (se estável na FOPDT, é estável na real) e é o que o enunciado pede; só Z--N exige $K_{cu}$ e $T_u$ reais.
+\item \textbf{De onde vem a Tabela 7-4.1?} Síntese direta: escolho $Y/R=e^{-t_0s}/(\tau_cs+1)$, $C=\frac1G\frac{Y/R}{1-Y/R}$, aproximo o atraso por Padé de 1ª ordem e desprezo o filtro; sai um PI com avanço: $K_c'=\tau/[K(t_0+\tau_c)]$, $\tau_I'=\tau$, $\tau_D'=t_0/2$.
+\item \textbf{O que é $\tau_c$ e como escolhi 40 s?} Constante de tempo desejada de malha fechada. Com 20--30 s o SC passa de 100\,\%; com 60 s fica lento; 40 s dá pico de SC de 94\,\% e sobressinal $<1\,\%$.
+\item \textbf{Por que a derivada atua só na VP?} Para não derivar o degrau do SP (pico enorme no SC). Por isso o SC dá um salto de $K_p\Delta SP$ (e não infinito).
+\item \textbf{Para que serve o filtro $\mu=0{,}1$?} Limita o ganho em alta frequência a $K_p(1+1/\mu)$ e reduz o efeito do ruído/quantização do ADC.
+\item \textbf{O que o $\alpha$ faz no 2GL?} Coloca $C_f$ só no caminho do SP: $C_f\cdot PI=K_p\frac{(1-\alpha)T_is+1}{T_is}$. $\alpha=0$ é o PI\_D comum; $\alpha\to1$ faz o SP entrar só pela integral. A resposta ao distúrbio não muda.
+\item \textbf{Como escolhi $\alpha=0{,}64$?} Metodologia do TCC: sintonia regulatória + $C_f$, variando $\alpha$ e escolhendo o que mais se aproxima da resposta servo (RMS mínimo 0,31\,\%), com SC menor que o do regulatório. O TCC usou 0,7.
+\item \textbf{Qual a diferença servo $\times$ regulatório?} Servo = seguir SP (ganho menor, suave); regulatório = rejeitar distúrbio (ganho maior). Um PID de 1 GL não otimiza os dois; o 2GL sim.
+\item \textbf{Por que a sintonia de ponto fixo (7-2.3) e não a de distúrbio (7-2.2)?} O experimento é degrau no SP. A de distúrbio, aplicada a SP, dá sobressinal de 84\,\% na FOPDT.
+\item \textbf{O que é razão de decaimento 1/4?} Cada pico é 1/4 do anterior (na simulação: $0{,}29/1{,}24=0{,}236$). É o critério do Z--N.
+\item \textbf{Por que Z--N dá sobressinal grande (62\,\%)?} Razão 1/4 é agressiva por projeto; margem de fase só $22^\circ$.
+\item \textbf{O que é o bumpless transfer / VP-tracking (seção 5-3.3)?} Em manual, o SP segue a VP; ao passar para automático $e=0$ e o SC não tem salto. Sem tracking, o SC salta $K_p(SP-VP)$ na transferência.
+\item \textbf{O que é reset windup (seção 5-3.4)?} Com o atuador saturado (SC=100\,\%) o erro persiste e o integrador continua acumulando valor irreal; quando o SP volta ao alcançável, o integrador precisa ``desenrolar'' e a VP fica presa/demora. Anti-windup para de integrar (ou desconta o excesso) durante a saturação.
+\item \textbf{Qual o máximo valor de SP para $\Vc3$?} $K_3\cdot100=39{,}7\,\%$ (2 V). Acima disso o SC satura em 100\,\% e não há como atingir.
+\item \textbf{O que muda no I\_PD?} P e D atuam sobre a VP; só o I atua sobre o erro. A FT SP$\to$VP perde o zero do PI: sem salto no SC, menos sobressinal, resposta mais lenta; a rejeição de distúrbio (loop) é a mesma.
+\item \textbf{Por que o $K$ experimental é 1,3\,\% menor que o teórico?} Tolerância de $R$ e $C$, quantização do ADC e, principalmente, a carga do ADC e a resistência de saída do Arduino (o ADC puxa corrente do nó).
+\item \textbf{Como o $R_p$ representa a ``abertura de 50\,\% de uma válvula''?} Um resistor em paralelo com $C_3$ para o terra é uma válvula de saída extra; com $R_p=2R_4$ ela tem metade da capacidade ($C_v$) da válvula $R_4$.
+\end{enumerate}
+
+\section{Exercícios de treino (refaça à mão)}\label{exerc}
+\begin{enumerate}[leftmargin=*]
+\item Dahlin com $\tau_c=50$ s para a planta ($K=0{,}3918$, $\tau=78{,}03$, $t_0=25{,}92$). \emph{Resp.:} $K_p=\dfrac{181{,}98}{2\cdot0{,}3918\cdot75{,}92}=3{,}059$; $T_i=90{,}99$; $T_d=11{,}11$.
+\item Z--N com $K_{cu}=35$ e $T_u=70$ s. \emph{Resp.:} $K_p=25{,}7$; $T_i=43{,}75$ s; $T_d=7{,}0$ s.
+\item Smith com $t_{28,3}=40$ s e $t_{63,2}=90$ s. \emph{Resp.:} $\tau=75$ s; $t_0=15$ s.
+\item Sundaresan com $t_{35,3}=50$ e $t_{85,3}=160$. \emph{Resp.:} $\tau=0{,}67\cdot110=73{,}7$; $t_0=65-46{,}4=18{,}6$ s.
+\item Degrau $70\to50\,\%$ em $\Vin$, $V_c$ vai de 25 a 15. Qual $K$? \emph{Resp.:} $K=(15-25)/(-20)=0{,}5$.
+\item IAE ponto fixo com $K=0{,}4$, $\tau=80$, $t_0=20$ ($r=0{,}25$). \emph{Resp.:} $r^{-0{,}869}=3{,}335$; $K_p=2{,}715\cdot3{,}335=9{,}05$; $T_i=80/(0{,}74-0{,}0325)=113{,}1$; $T_d=27{,}84\cdot0{,}2816=7{,}84$ s.
+\item Polinômio $10\,000s^3+2000s^2+100s+1$, $K=0{,}4$: $K_{cu}$, $\omega_u$, $T_u$? \emph{Resp.:} $K_{cu}=(2000\cdot100/10\,000-1)/0{,}4=47{,}5$; $\omega_u=\sqrt{100/10\,000}=0{,}1$; $T_u=62{,}8$ s.
+\item No 2GL com $\alpha=0{,}5$ e $T_i=90{,}99$: zero e polo de $C_f$? \emph{Resp.:} zero em $1/45{,}5$, polo em $1/90{,}99$.
+\item $SC$ em regime para $SP=35\,\%$? \emph{Resp.:} $35/0{,}3918=89{,}3\,\%$ (ainda $<100$: alcançável). Para $SP=45$: $114{,}9\,\%$ $\Rightarrow$ satura.
+\end{enumerate}
+
+\section{Erros comuns (pegadinhas)}
+\begin{itemize}
+\item Esquecer de \textbf{esperar o regime} antes do degrau: $\tau_1=68{,}7$ s $\Rightarrow$ espere $\ge7\tau_1\approx480$ s (8 min) na condição inicial.
+\item Misturar \textbf{unidades/forma} dos parâmetros: o bloco pede $K_i$ e $K_d$ ou $T_i$ e $T_d$? Confira. Ter $K_i=K_p/T_i$ e $K_d=K_pT_d$.
+\item Usar a \textbf{forma série} da tabela como se fosse paralela (esqueceu a conversão do Dahlin e do Z--N). A do IAE (7-2.3) já é ideal.
+\item Degrau grande demais: o SC satura e a simulação linear deixa de valer (1.1: 20$\to$30; 3.1: 20$\to$25; 4.1: 10$\to$12).
+\item Comparar SC simulado em \emph{desvio} com SC experimental absoluto (ou o contrário).
+\item No 4.1: usar $K_{cu}$ da FOPDT (13,7). Tem que ser o medido na bancada (ou 38,97 da FT completa).
+\item No 2.2: pensar que o $\alpha$ melhora a rejeição de distúrbio. Não melhora: $VP/D$ não contém $C_f$.
+\item ScadaBR: variáveis \texttt{SO, SP, VP, VP1, VP2} $=$ \textbf{SC, SP, $\Vc3$, $\Vc2$, $\Vc1$}. Em malha fechada, \texttt{SO} é o \textbf{sinal de controle}.
+\end{itemize}
+
+\newpage
+%=====================================================================
+\part{Roteiro de bancada}
+\section{Visão geral e tempo estimado}
+\begin{center}\small\begin{tabular}{lp{7.5cm}c}\toprule Etapa & O que fazer & Tempo\\\midrule
+A & Montar o circuito, conferir $R$, $C$, terra comum & 15 min\\
+B & Configurar OpenPLC e ScadaBR (variáveis, 1 s, relatório) & 15 min\\
+C & Teste de sanidade em malha aberta & 10 min\\
+D & Item sorteado (inclui 8 min para atingir o regime inicial) & 15--30 min\\
+E & Exportar CSV e comparar com a simulação & 10 min\\\bottomrule\end{tabular}\end{center}
+\begin{dica}O que mais consome tempo é \textbf{esperar o circuito chegar ao regime}. Antes de qualquer degrau, deixe o sistema em manual com $SO=SP_0/K$ por $\sim$8 minutos (ex.: item 1.1: $SO=20/0{,}3918=51{,}0\,\%$ para $\Vc3=20\,\%$). Faça isso enquanto configura o resto.\end{dica}
+
+\section{Materiais e segurança}
+\begin{itemize}
+\item \chk Arduino (ou ESP) com OpenPLC; cabo USB; computador com \textbf{OpenPLC Editor/Runtime} e \textbf{ScadaBR}.
+\item \chk Resistores ($R_1\ldots R_4$) e capacitores ($C_1\ldots C_3$) do circuito G; protoboard e fios.
+\item \chk Multímetro (medir $R$, $C$ e as tensões de conferência).
+\item \chk Para o item 2.2: resistor $R_p\approx133{,}6$ k$\Omega$ (ex.\ 100 k$\Omega$ + 33 k$\Omega$ em série; \textbf{meça}) com um fio/chave para ligar e desligar.
+\item \chk Relatório impresso (Resolução detalhada + este guia) e a tabela de parâmetros.
+\end{itemize}
+\begin{alerta}
+\begin{itemize}
+\item \textbf{Capacitores eletrolíticos têm polaridade:} o terminal $+$ para o lado da tensão. A tensão máxima é 5 V (100\,\%), dentro da especificação, mas ligue o $-$ ao terra.
+\item Nunca aplique mais que 5 V nas entradas analógicas. Ligue \textbf{o terra do circuito ao GND do Arduino}.
+\item Descarregue os capacitores (curto no $V_{in}$ para terra por alguns segundos, com $SO=0$) antes de começar do zero.
+\end{itemize}\end{alerta}
+
+\section{Etapa A --- Montagem do circuito}
+\begin{enumerate}
+\item Monte a cadeia: $\Vin\to R_1\to$ nó 1 ($C_1$ ao terra) $\to R_2\to$ nó 2 ($C_2$ ao terra) $\to R_3\to$ nó 3 ($C_3$ ao terra) $\to R_4\to$ terra.
+\item Meça cada $R$ e $C$ \textbf{fora do circuito} e anote. Compare com a tabela: $22{,}0$; $46{,}8$; $32{,}6$; $66{,}8$ k$\Omega$ e $947$; $947$; $955$ $\mu$F. Se algo for diferente, \textbf{refaça as FTs} (ou use as conversões do script: edite $R$ e $C$ em \texttt{simula\_bancada.py}).
+\item Ligações ao Arduino (\textbf{confirme o mapeamento no seu ambiente}):
+\begin{center}\small\begin{tabular}{lll}\toprule Sinal & Ponto do circuito & Variável (professor)\\\midrule
+Saída analógica (SC) & $V_{in}$ (entrada de $R_1$) & \texttt{SO}\\
+Entrada analógica 1 & nó 3 ($\Vc3$, planta de controle) & \texttt{VP}\\
+Entrada analógica 2 & nó 2 ($\Vc2$) & \texttt{VP1}\\
+Entrada analógica 3 & nó 1 ($\Vc1$) & \texttt{VP2}\\
+GND & terra do circuito (lado de $R_4$ e dos $C$) & ---\\\bottomrule\end{tabular}\end{center}
+\item Se a ``saída analógica'' do seu Arduino é PWM, confirme com o professor/o ambiente que ela está filtrada (o ambiente da disciplina já foi elaborado para isso).
+\end{enumerate}
+\begin{dica}\textbf{Por que o ganho medido fica 1--2\,\% abaixo do teórico?} O ADC puxa uma pequena corrente do nó medido e a saída do Arduino tem resistência interna: o divisor resistivo muda um pouco. É esperado; use sempre o $K$ medido ($0{,}3918$) na FOPDT.\end{dica}
+
+\section{Etapa B --- Software}
+\textbf{OpenPLC (programa):}
+\begin{enumerate}
+\item No editor, use o programa do professor com o bloco de PID (PI\_D paralelo, com opção de PI\_D2GL e I\_PD). Variáveis: \texttt{SP}, \texttt{VP}, \texttt{SC}, \texttt{Kp}, \texttt{Ki} (ou \texttt{Ti}), \texttt{Kd} (ou \texttt{Td}), \texttt{mu} ($=0{,}1$), \texttt{alpha}, modo automático/manual.
+\item Escalas: \textbf{tudo em \%} (0--100 $=0$--5 V). ADC de 10 bits $\Rightarrow$ resolução $100/1024=0{,}098\,\%$.
+\item \textbf{Confirme no bloco}: (i) se pede $K_i$/$K_d$ ou $T_i$/$T_d$; (ii) a unidade do tempo (s); (iii) se há saturação do SC em 0--100 e se há anti-windup e bumpless (itens 1.2 e 1.3 precisam alternar isso).
+\end{enumerate}
+\textbf{ScadaBR:}
+\begin{enumerate}
+\item Fonte de dados Modbus apontando para o OpenPLC; pontos: \texttt{SO}, \texttt{SP}, \texttt{VP}, \texttt{VP1}, \texttt{VP2}.
+\item \textbf{Período de atualização/aquisição: 1 s} (obrigatório; o simulador assume amostra por segundo).
+\item Ative o registro histórico e monte um gráfico com as variáveis. No fim do ensaio, gere o \textbf{relatório em CSV} (o arquivo tem as 5 variáveis empilhadas: primeiro todas as amostras de \texttt{SO}, depois \texttt{SP}, \texttt{VP}, \texttt{VP1}, \texttt{VP2} --- como no script do professor).
+\item \textbf{Anote o horário} de cada ação manual (ligar $R_p$, mudar SP, passar para automático); o CSV não registra isso.
+\end{enumerate}
+
+\section{Etapa C --- Teste de sanidade (malha aberta)}
+\begin{enumerate}
+\item Modo manual, $SO=50\,\%$. Aguarde e confira no multímetro: $\Vc3\approx0{,}397\cdot2{,}5=0{,}99$ V ($19{,}6\,\%$ no ScadaBR) e $\Vc1\approx2{,}17$ V.
+\item Confira que $VP\approx19{,}6\,\%$ e $VP2\approx43{,}4\,\%$. Se estiver muito diferente (mais que 2 pontos), verifique terra, polaridade, ligações das entradas e a fonte.
+\item Opcional (se o professor pedir): degrau de $SO$ $70\to50\,\%$ e confira $K_3=0{,}392$.
+\end{enumerate}
+
+\section{Procedimento comum de malha fechada}\label{comum}
+Todos os itens seguem a mesma sequência:
+\begin{enumerate}
+\item \textbf{Condição inicial (manual):} $SO=SP_0/K$ ($K=0{,}3918$ medido) por $\ge8$ min até $\Vc3$ estabilizar em $SP_0$.
+\item Digite os parâmetros do item (Seção~\ref{tabpar}). \textbf{Releia-os na tela} (um dígito errado é o erro mais comum).
+\item Ajuste $SP=VP$ (valor atual) \textbf{antes} de passar para automático (isto é o VP-tracking manual). Grave o ScadaBR (inicie o registro $\sim$30 s antes).
+\item Passe para \textbf{automático}. Confirme que o SC \textbf{não deu salto} (sistema bumpless).
+\item Aguarde $\sim$50 s e aplique o \textbf{degrau de SP} do item (anote o horário).
+\item Registre até a VP assentar ($\sim$400--600 s) e então pare o registro.
+\item Exporte o CSV e rode a comparação (Etapa~\ref{pos}).
+\end{enumerate}
+
+%--------------------------------------------------------------------
+\section{Experimentos, item por item}
+\subsection{Item 1.1 --- PID pela Tabela 7-4.1 (Dahlin, $\tau_c=40$ s)}
+\begin{parm}$K_p=3{,}523$;\ $K_i=0{,}03872$ ($T_i=90{,}99$ s);\ $K_d=39{,}15$ ($T_d=11{,}11$ s);\ $\mu=0{,}1$.\quad Degrau de SP: \textbf{20 $\to$ 30\,\%}.\end{parm}
+\textbf{Passo a passo:} (1) manual com $SO=51{,}0\,\%$ por 8 min ($VP\to20\,\%$). (2) Parâmetros acima. (3) $SP=20$ (=VP), automático. (4) Após 50 s: $SP=30$. (5) Grave 500--600 s. (6) Compare.
+\begin{esp}VP sobe sem sobressinal relevante ($\le0{,}7\,\%$); $t_{63,2}\approx68$--70 s; acomodação ($\pm2\%$) $\approx170$ s. SC: salto de $+35$ pontos em $t=50$ s (de $\sim$51 para $\sim$86\,\%), pico 88--94\,\%, depois cai a $\sim$75,5--76,6\,\% (=$30/K$). Veja a figura da Seção 8 da Resolução (Fig.\ do item 1.1).\end{esp}
+\textbf{Se o resultado for diferente:} SC saturando em 100\,\% $\to$ degrau maior que o previsto. VP lenta demais $\to$ confira $K_p$. Oscilação $\to$ derivada mal parametrizada ($K_d$ errado).
+
+\subsection{Item 1.2 --- Problema sem bumpless VP-tracking (seção 5-3.3)}
+\textbf{Ideia.} Mostrar que, ao passar de manual para automático com $SP\neq VP$, o SC dá um salto $K_p(SP-VP)$ (um ``bump'' no atuador e na VP). Com VP-tracking (SP seguindo a VP em manual), não há salto.
+\begin{parm}Use a sintonia do 1.1 ($K_p=3{,}523$, $T_i=90{,}99$, $T_d=11{,}11$). Manual: $SO=50{,}4\,\%$ ($VP\approx20\,\%$).\end{parm}
+\textbf{Parte A --- sem VP-tracking (o problema):}
+\begin{enumerate}
+\item Desabilite o tracking no bloco (se houver opção). \textbf{Se o bloco já tem tracking embutido}, programe uma versão sem ele (SP independente da VP) ou, se o professor aprovar, ajuste $SP=30$ \emph{antes} de passar para automático e use a versão sem tracking.
+\item Manual, $SO=50{,}4\,\%$, espere a VP assentar em $\approx20\,\%$.
+\item Ajuste $SP=30\,\%$ (propositalmente diferente da VP).
+\item Inicie o registro. Passe para \textbf{automático}. Anote o instante.
+\end{enumerate}
+\textbf{Parte B --- com VP-tracking (a solução):} repita com a mesma condição, mas em manual deixe o SP \emph{seguindo a VP} ($SP=VP\approx20$); passe para automático (nenhum salto); \textbf{depois}, 100 s mais tarde, mude o SP para 30.
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g12.png}\end{figure}
+Parte A: no instante da transferência o SC salta de $50{,}4$ para $\approx85{,}6\,\%$ ($=50{,}4+3{,}523\cdot(30-20)$) e a VP sobe imediatamente, sem que o operador tenha dado ``ordem de degrau''. Parte B: o SC fica em $50{,}4\,\%$ na transferência; o degrau de SP depois produz a resposta normal.\end{esp}
+\begin{dica}O salto observado depende de como o bloco inicializa o integrador (aqui supus que o integrador assume o valor do SC manual). Se o seu bloco zerar o integrador, o SC pode \emph{cair} ($\approx K_p\cdot e=35\,\%$) em vez de subir; descreva o que viu e explique: em ambos os casos há um \emph{bump} indesejado.\end{dica}
+\textbf{O que gravar:} SO, SP, VP em ambas as partes. \textbf{O que concluir:} sem tracking há um salto $=K_p(SP-VP)$ no SC (bump); com tracking, a transferência é suave.
+
+\subsection{Item 1.3 --- Problema sem anti reset windup (seção 5-3.4)}
+\textbf{Ideia.} Pedir um SP \emph{inalcançável} (acima de $K_3\cdot100\approx39{,}2\,\%$): o SC satura em 100\,\%, o erro persiste e o integrador acumula. Quando o SP volta a um valor alcançável, o integrador está ``carregado'' e a VP demora a responder.
+\begin{parm}Sintonia do 1.1. Sequência de SP: \textbf{25\,\% (regime)} $\to$ \textbf{45\,\%} (por $\sim$300 s) $\to$ \textbf{30\,\%}. SC saturado em 0--100\,\%.\end{parm}
+\textbf{Passo a passo:}
+\begin{enumerate}
+\item Manual: $SO=25/0{,}3918=63{,}8\,\%$ por 8 min ($VP\to25\,\%$). Parâmetros do 1.1. SC com saturação em 0--100\,\% (confirme).
+\item \textbf{Versão sem anti-windup:} desabilite a proteção no bloco (ou use a versão que integra sempre). Automático com $SP=25$.
+\item Após 50 s: $SP=45\,\%$. Mantenha \textbf{300 s} (SC fica em 100\,\%; VP estaciona em $\approx39$\,\%). Anote o horário.
+\item Mude para $SP=30\,\%$. Observe e grave até a VP chegar a 30\,\% ($\sim$10 min).
+\item \textbf{Versão com anti-windup:} (descarregue/repita a condição inicial) repita exatamente a sequência com a proteção ligada.
+\end{enumerate}
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g13.png}\end{figure}
+Sem anti-windup: depois do SP voltar a 30\,\%, o SC \emph{continua em 100\,\%} e a VP fica em $\approx39{,}5\,\%$ por mais de 100 s; só chega a $\pm0{,}5$ de 30\,\% cerca de \textbf{465 s} depois da mudança. Com anti-windup: o SC desce imediatamente e a VP chega a 30\,\% em $\approx$\textbf{74 s} (com um pequeno subsinal). (O tempo de recuperação sem proteção cresce com o tempo em que o SP ficou inalcançável.)\end{esp}
+\textbf{O que gravar:} SO (SC), SP e VP nas duas versões. \textbf{O que concluir:} windup = integrador acumulando durante a saturação; o atraso na saída da saturação.
+
+\subsection{Item 2.1 --- PID 2GL ($\alpha=0{,}64$)}
+\begin{parm}$K_p=5{,}057$;\ $K_i=0{,}05558$ ($T_i=90{,}99$);\ $K_d=56{,}21$ ($T_d=11{,}11$);\ $\mu=0{,}1$;\ $\alpha=0{,}64$.\quad Degrau de SP: \textbf{20 $\to$ 30\,\%}.\end{parm}
+\textbf{Passo a passo:} procedimento comum com o bloco em \textbf{PI\_D2GL} e $\alpha=0{,}64$. Se possível, repita depois com $\alpha=0$ (PI\_D comum).
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/i21.png}\end{figure}
+Com $\alpha=0{,}64$: sem sobressinal, $t_{63,2}\approx103$--105 s, $t_s\approx330$--350 s, pico do SC $\approx$\textbf{75--81\,\%}. Com $\alpha=0$ (regulatório): sobressinal $\approx2{,}5\,\%$, $t_{63,2}\approx52$ s, SC chegando a \textbf{103--114\,\%} (saturaria). SC final $\approx75{,}5$--76,6\,\%.\end{esp}
+\textbf{Conclusão a escrever:} o $\alpha$ suaviza o SC e reproduz a resposta servo mantendo o ganho regulatório.
+
+\subsection{Item 2.2 --- Distúrbio com $R_p$ (válvula 50\,\%)}
+\textbf{Ideia.} $R_p$ em paralelo com $C_3$ (nó 3 $\to$ terra) é uma válvula de escoamento extra. Metade da capacidade da válvula $R_4$ $\Rightarrow$ $R_p=2R_4=133{,}6$ k$\Omega$ (condutância $g_p=7{,}49\ \mu$S).
+\begin{alerta}O enunciado diz ``uma das válvulas''. Escolhi a de saída ($R_4$) por ser a que tem o efeito de ``abrir o dreno'' do último tanque; \textbf{confirme com o professor} qual válvula ele quer analogamente. Se for outra, recalcule $R_p=2R_k$ e refaça a simulação com \texttt{--rp}.\end{alerta}
+\textbf{Efeito no modelo.} O ganho cai para $K_3'=0{,}3052$ ($-23\,\%$): em malha aberta a VP iria de 25 para $0{,}3052\cdot62{,}9=19{,}2\,\%$; em malha fechada o controlador precisa subir o SC de $62{,}9$ para $25/0{,}3052=81{,}9\,\%$.
+\begin{parm}Sintonia do 2.1 ($K_p=5{,}057$, $T_i=90{,}99$, $T_d=11{,}11$). $SP=25\,\%$ constante (sem degrau de SP).\end{parm}
+\textbf{Passo a passo:}
+\begin{enumerate}
+\item Manual: $SO=25/0{,}3918=63{,}8\,\%$ por 8 min. Automático com $SP=25\,\%$ (=VP). Grave 100 s para ter linha de base.
+\item Prepare $R_p$ (133,6 k$\Omega$) com um fio solto num lado e o outro lado no terra.
+\item \textbf{Ligue $R_p$} entre o nó 3 e o terra (anote o horário exato). \textbf{Não toque no SP.}
+\item Grave até a VP voltar a 25\,\% ($\sim$300 s). Opcional: desligue $R_p$ e observe o distúrbio inverso.
+\item Opcional para comparar: repita com a sintonia \emph{servo} ($K_p=2{,}234$, $K_i=0{,}02455$, $K_d=24{,}83$) para mostrar que a regulatória rejeita melhor.
+\end{enumerate}
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g22.png}\end{figure}
+VP cai $\approx$\textbf{2,6 pontos} (regulatório) e volta a $\pm1$ em $\approx$\textbf{134 s}; servo cai $3{,}3$ e leva $\approx284$ s; Dahlin ($\tau_c=40$) cai $2{,}9$ e leva $\approx190$ s. SC sobe até $\approx$\textbf{81,9\,\%} e estabiliza. O $\alpha$ \textbf{não} altera esta resposta ($VP/D$ não contém $C_f$).\end{esp}
+\textbf{Simulação para o relatório:} use o script com \texttt{--rp 133600 --rp-t <instante do $R_p$>} (Seção~\ref{pos}).
+
+\subsection{Item 3.1 --- Integral do erro mínimo (seção 7-2.3)}
+\begin{parm}$K_p=7{,}222$;\ $K_i=0{,}06449$ ($T_i=111{,}98$);\ $K_d=71{,}63$ ($T_d=9{,}92$);\ $\mu=0{,}1$.\quad Degrau de SP: \textbf{20 $\to$ 25\,\%}.\end{parm}
+\textbf{Passo a passo:} procedimento comum, com $SO_0=51{,}0\,\%$.
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/i31.png}\end{figure}
+Sobressinal $\approx$ \textbf{2,6\,\%} (FT completa; $8{,}1\,\%$ na FOPDT); $t_{63,2}\approx44$ s; acomodação $\approx110$--117 s; pico do SC 87--95\,\%; SC final $\approx63$\,\%. É \emph{mais rápida} que a Dahlin do 1.1 ($t_{63}=68$ s), com mais sobressinal.\end{esp}
+\begin{alerta}Com este ganho, degrau de 20 $\to$ 30\,\% saturaria o SC. Mantenha 20 $\to$ 25\,\%.\end{alerta}
+
+\subsection{Item 4.1 --- Ziegler--Nichols 1/4 (Tabela 7-1.1)}
+\textbf{Parte 1 --- teste de ganho final (experimental):}
+\begin{enumerate}
+\item Condição inicial: $SP_0=10\,\%$ ($SO=10/0{,}3918=25{,}5\,\%$), 8 min. Escolher um ponto de operação baixo deixa folga para o SC oscilar.
+\item Controlador \textbf{só proporcional}: $K_i=0$, $K_d=0$ (ou $T_i$ muito grande e $T_d=0$). Comece com $K_c=15$.
+\item Automático. Aplique degrau de SP de $+2$ pontos. Observe a oscilação.
+\item Aumente $K_c$ em passos de $\sim$5 (depois 2, depois 1) até a VP oscilar com amplitude \textbf{constante}. Esse é o $K_{cu}$. Meça o período entre picos (=$T_u$) no gráfico (use vários picos).
+\item \textbf{Cuidado:} com $K_c$ alto o SC satura (0--100\,\%); procure o \emph{menor} $K_c$ que sustenta a oscilação sem estar saturado de forma crítica (reduza o degrau de SP se necessário).
+\end{enumerate}
+\begin{esp}Esperado (FT completa): $K_{cu}\approx39$ e $T_u\approx68{,}9$ s ($\omega_u=0{,}091$ rad/s). Valores medidos tipicamente ficam 5--15\,\% diferentes (K real, ADC, atraso do scan do PLC). Com $0{,}5K_{cu}$ a oscilação amortece; com $1{,}2K_{cu}$ ela cresce.\begin{figure}[H]\centering\includegraphics[width=.9\textwidth]{figs/i41_kcu.png}\end{figure}\end{esp}
+\textbf{Parte 2 --- PID de Z--N:} recalcule com os \emph{seus} $K_{cu}$ e $T_u$:
+\[K_p=0{,}735K_{cu},\quad T_i=0{,}625T_u,\quad T_d=0{,}1T_u,\quad K_i=K_p/T_i,\quad K_d=K_pT_d .\]
+Com os valores da simulação: $K_p=28{,}65$; $T_i=43{,}03$; $T_d=6{,}885$; $K_i=0{,}6659$; $K_d=197{,}3$. Degrau de SP \textbf{10 $\to$ 12\,\%}.
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/i41.png}\end{figure}
+Sobressinal $\approx$\textbf{62--65\,\%} do degrau (VP até $\sim13{,}3\,\%$), $t_{63,2}\approx21$ s, acomodação $\approx209$ s, razão de decaimento $\approx0{,}24$ ($\approx1/4$), SC com pico de $\sim$85\,\% e que \textbf{toca 0\,\%} no primeiro retorno (na bancada vai saturar; diferença esperada em relação à simulação linear).\end{esp}
+
+\subsection{Item 4.2 --- I\_PD com a sintonia do 4.1}
+\textbf{Ideia.} Usar os \emph{mesmos} $K_p$, $K_i$, $K_d$ do 4.1, mas com a estrutura I\_PD (só o integrador atua sobre o erro; P e D atuam sobre a VP). No OpenPLC isso é uma opção do bloco (confirme).
+\begin{parm}$K_p=28{,}65$;\ $K_i=0{,}6659$;\ $K_d=197{,}3$;\ $\mu=0{,}1$;\ modo \textbf{I\_PD}.\quad Degrau de SP: \textbf{10 $\to$ 12\,\%}.\end{parm}
+\textbf{Passo a passo:} procedimento comum (condição inicial $SO_0=25{,}5\,\%$); selecione I\_PD; degrau de SP 10 $\to$ 12\,\%; grave. Se houver tempo, repita com a estrutura PI\_D (item 4.1) para sobrepor.
+\begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g42.png}\end{figure}
+PI\_D: sobressinal $\approx65\,\%$, $t_{63}\approx21$ s, SC pula $\approx+57$ pontos (pico $\sim$85\,\%). I\_PD: sobressinal $\approx$\textbf{1,6\,\%}, $t_{63}\approx$\textbf{46 s} (mais lento), \textbf{sem salto no SC} (pico $\sim$43\,\%, mínimo $\sim$24\,\%).\end{esp}
+\textbf{Explicação para o relatório:} em I\_PD a FT de SP para VP é $\dfrac{K_i\,G}{1+(PI+D)G}$ (só $K_i$ no numerador): o zero do PI (que causa o sobressinal e o salto do SC) desaparece. O polinômio característico é o mesmo, então a \emph{rejeição de distúrbio} não muda, mas o seguimento de SP fica suave e mais lento. É útil quando o ganho é alto e o atuador é sensível a degraus de SP.
+
+%--------------------------------------------------------------------
+\section{Pós-processamento e comparação com a simulação}\label{pos}
+\subsection{Exportar e preparar o CSV}
+\begin{enumerate}
+\item Gere o relatório CSV no ScadaBR (período do ensaio, aquisição 1 s).
+\item Os dados vêm \textbf{empilhados}: 5 variáveis $\times$ $N$ amostras (\texttt{SO, SP, VP, VP1, VP2}); o script divide por 5, como o do professor.
+\item Defina onde começa o trecho a comparar (use o parâmetro \texttt{--inicio} para cortar o período em manual). A simulação assume que no \textbf{primeiro ponto do trecho} a planta está em regime com $SC=SO(1)$.
+\end{enumerate}
+\subsection{Script em Python (testado) --- \texttt{simula\_bancada.py}}
+Simula a \textbf{FT completa} em malha fechada com o PI\_D paralelo (derivada na VP, filtro $\mu$), com opções de $\alpha$ (2GL), I\_PD, saturação, anti-windup por \emph{clamping} e $R_p$.
+\begin{lstlisting}
+# Teste interno (deve imprimir pico de SC ~88 e sobressinal do Z-N ~62-65):
+python3 simula_bancada.py autoteste
+
+# Item 1.1 (comparar com a bancada; --inicio corta amostras iniciais):
+python3 simula_bancada.py comparar MEUARQUIVO.csv --kp 3.523 --ti 90.99 --td 11.114
+
+# Item 2.1:   --kp 5.057 --ti 90.99 --td 11.114 --alpha 0.64
+# Item 2.2:   --kp 5.057 --ti 90.99 --td 11.114 --rp 133600 --rp-t 100   (rp-t = segundo do trecho em que ligou o Rp)
+# Item 3.1:   --kp 7.222 --ti 111.98 --td 9.917
+# Item 4.1:   --kp 28.654 --ti 43.031 --td 6.885 --sat
+# Item 4.2:   --kp 28.654 --ti 43.031 --td 6.885 --modo I_PD --sat
+# Item 1.3:   --kp 3.523 --ti 90.99 --td 11.114 --sat [--aw clamp]
+\end{lstlisting}
+A saída traz o \textbf{RMS e o erro máximo} de VP e de SC e salva \texttt{comparacao.png} (VP exp.\ $\times$ sim.\ e SC exp.\ $\times$ sim.). \textbf{Edite $R$ e $C$ no topo do arquivo} se os seus valores medidos forem outros.
+\begin{alerta}A leitura do CSV foi testada só com um arquivo sintético no formato descrito (3ª coluna numérica, vírgula decimal, 5 variáveis empilhadas). Se o separador ou as colunas do seu arquivo forem diferentes, ajuste a função \texttt{le\_csv} (é curta). Em 1.2 (bumpless) não há simulação pronta: a comparação é qualitativa.\end{alerta}
+\subsection{Script MATLAB --- \texttt{compara\_malha.m} (estilo do professor)}
+Mesma lógica (planta completa, simulação discreta). \textbf{Não foi executado no MATLAB} (não disponível aqui); a lógica é a do Python acima. Teste primeiro com o caso 1.1 e confira se a simulação dá pico de SC $\approx88\,\%$.
+\begin{lstlisting}
+% Edite: Kp, Ti, Td, alpha, modo, sat, aw, Rp, tRp, inicio e o nome do CSV
+tablex=readtable('MALHAFECHADA.csv'); cellx=table2cell(tablex);
+matx=cell2mat(cellx(:,3)); div=size(matx,1)/5;      % igual ao do professor
+SO=matx(1:div); SP=matx(div+1:2*div); VP=matx(2*div+1:3*div);
+% ... (ver arquivo compara_malha.m: simulacao discreta + graficos + RMS)
+\end{lstlisting}
+\subsection{Diferenças entre o script do professor e o meu}
+\begin{itemize}
+\item O do professor usa \textbf{PID = P+I+D com derivada no erro} (\texttt{PID=P+I+D}); o OpenPLC é \textbf{PI\_D} (derivada na VP). Os scripts deste guia usam a forma do OpenPLC.
+\item O do professor usa Padé de 1ª ordem para o atraso e a FOPDT; aqui uso a \textbf{planta completa} (sem Padé). Para comparar com a FOPDT, use a Resolução (Padé de 3ª ordem).
+\item O do professor simula em \textbf{desvios} (\texttt{SP-SP(1,1)}); meus scripts usam \textbf{valores absolutos} ($SC_0=SO(1)$). Ao comparar com o dele, desloque o SC.
+\end{itemize}
+\subsection{O que escrever no relatório (para cada item)}
+\begin{enumerate}
+\item Parâmetros usados; degrau; condições iniciais.
+\item Figura VP exp.\ $\times$ sim.\ e SC exp.\ $\times$ sim.
+\item \textbf{RMS e erro máximo} de VP e de SC (% da escala).
+\item Comentário curto: quais características concordam (tempo de subida, sobressinal, pico do SC, valor final) e \textbf{por que} diferem (K 1,3\,\% menor; ADC 0,098\,\%; saturação do SC; atraso de scan; tolerâncias).
+\end{enumerate}
+
+\section{Tabela de resultados esperados (cola de bancada)}
+\begin{center}\small
+\begin{tabular}{llp{8cm}}\toprule Item & Degrau/ação & Resultado esperado (simulação, FT completa)\\\midrule
+1.1 & SP 20$\to$30 & sobress.\ $\le0{,}7\,\%$; $t_{63}\approx70$ s; SC pulo $+35$, pico 88--94, final 75,5\\
+1.2 & trocar p/ auto com SP$\ne$VP & SC salta $K_p(SP-VP)\approx35$ pontos (50,4$\to$85,6)\\
+1.3 & SP 25$\to$45$\to$30 & sem AW: VP presa em $\approx39{,}5$ por $>100$ s, volta só após $\approx465$ s; com AW: 74 s\\
+2.1 & SP 20$\to$30, $\alpha=0{,}64$ & sem sobress.; $t_{63}\approx104$ s; pico SC 76--81\\
+2.2 & $R_p=133{,}6$ k$\Omega$ ligado & queda 2,6 pontos; recupera em $\approx134$ s; SC final 81,9\\
+3.1 & SP 20$\to$25 & sobress.\ $\approx2{,}6\,\%$; $t_{63}\approx44$ s; SC pico 87\\
+4.1 & SP 10$\to$12 & sobress.\ 62--65\,\%; $t_{63}\approx21$ s; razão 1/4; SC toca 0\\
+4.2 & I\_PD, SP 10$\to$12 & sobress.\ $\approx1{,}6\,\%$; $t_{63}\approx46$ s; sem salto no SC\\\bottomrule\end{tabular}\end{center}
+
+\section{Solução de problemas}
+\begin{center}\small
+\begin{tabular}{p{4.6cm}p{10.4cm}}\toprule Sintoma & Causa provável / o que fazer\\\midrule
+VP$\approx0$ com SO alto & Terra não comum; entrada analógica no pino errado; capacitor com polaridade invertida.\\
+VP saturada em 100\,\% ou valores absurdos & Escala errada (0--1023 em vez de \%); ou mapeamento de pino trocado.\\
+Ruído de $\pm0{,}1$--0,2\,\% na VP & Normal (ADC 0,098\,\%); em Z--N o $K_d$ alto amplifica; confira $\mu$ e o aterramento.\\
+SC ``treme'' muito (3.1, 4.1) & Ganho de alta frequência $K_p(1+1/\mu)$; use os valores da tabela; não aumente $K_d$.\\
+Resposta mais lenta/rápida que a simulação em $\sim$5--10\,\% & Tolerância de $R$, $C$; $K$ real $\ne$ teórico. Refaça a simulação com os valores medidos.\\
+Oscilação em 1.1/2.1/3.1 & $K_i$ ou $K_d$ digitados errado; o bloco usa $T_i$ em vez de $K_i$ (ou o contrário).\\
+SC satura onde a simulação não satura & Degrau maior que o do roteiro; ponto inicial diferente (SC$_0$ errado); $K$ diferente.\\
+Não repete o experimento & Capacitores não descarregados/regime não atingido; espere 8 min antes do degrau.\\
+Tempos do ScadaBR irregulares & Verifique período de atualização (1 s) e carga da CPU; o simulador assume 1 amostra/s.\\\bottomrule\end{tabular}\end{center}
+
+\section{Folha de registro (imprima e preencha)}
+\begin{center}\small
+\begin{tabular}{|p{5.2cm}|p{9.5cm}|}\hline
+Data / hora / sorteio (questão e item) & \\\hline
+$R_1,R_2,R_3,R_4$ medidos [k$\Omega$] & \\\hline
+$C_1,C_2,C_3$ medidos [$\mu$F] & \\\hline
+$K$ medido ($V_{c3}/V_{in}$ em regime) & \\\hline
+Parâmetros digitados ($K_p,K_i,K_d,\mu,\alpha$) & \\\hline
+Estrutura (PI\_D / 2GL / I\_PD); saturação; anti-windup; tracking & \\\hline
+$SP_0$; $SO_0$ inicial; tempo em regime antes do degrau & \\\hline
+Instantes das ações (degrau de SP, $R_p$, auto/manual) & \\\hline
+Nome do arquivo CSV & \\\hline
+RMS VP / RMS SC; erro máx.\ VP / SC & \\\hline
+Observações (saturação, ruído, diferenças) & \\\hline
+\end{tabular}\end{center}
+
+\section{Roteiro do dia da avaliação}
+\begin{enumerate}
+\item \textbf{Sorteio.} Anote questão e item; localize no relatório os parâmetros (Seção~\ref{tabpar}).
+\item \textbf{Em paralelo:} monte o circuito e já deixe o sistema em manual com $SO=SP_0/K$ (8 min).
+\item Confira $R$, $C$ rapidamente (se mudou o circuito, avise e recalcule).
+\item Digite os parâmetros; \textbf{releia}. Siga a Seção~\ref{comum}.
+\item Grave; exporte; rode o script; mostre VP e SC exp.\ $\times$ sim.
+\item \textbf{Esteja pronta para explicar}: de onde vêm as fórmulas (Parte I), por que o SC salta $K_p\Delta SP$, o que muda se $\tau_c$ ou $\alpha$ mudarem, por que a FOPDT é conservadora.
+\item Se algo falhar: descreva a causa e diga como corrigiria (a possibilidade de refazer existe).
+\end{enumerate}
+\end{document}
