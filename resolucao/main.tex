@@ -1,0 +1,46 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,graphicx,float,multirow}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black}
+\setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
+\newcommand{\Vc}[1]{V_{c#1}}
+\newcommand{\Vin}{V_{in}}
+\newcommand{\pct}{\,\%}
+\newcommand{\num}[1]{\mathrm{#1}}
+\newtcolorbox{just}{colback=blue!4,colframe=blue!50!black,title=Por que isso?,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{res}{colback=green!5,colframe=green!40!black,title=Resultado,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{formula}{colback=orange!6,colframe=orange!60!black,title=Fórmula de partida,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{todo}{colback=yellow!10,colframe=yellow!50!black,title=Experimento (a preencher na bancada),fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+
+\begin{document}
+\begin{center}
+{\LARGE\bfseries Segunda Avaliação de Controle de Processos}\\[4pt]
+{\Large Resolução detalhada, com todos os cálculos por extenso (material de estudo)}\\[8pt]
+Aluno(a): Izabella Camops Trarbach\\
+Prof.\ Saul da S.\ Munareto --- Engenharia de Controle e Automação --- IFES Serra\\
+Circuito G; planta de controle: $\Vc3/\Vin$
+\end{center}
+
+\begin{tcolorbox}[colback=gray!6,colframe=gray!60]
+\textbf{Como ler este documento.} Cada cálculo segue sempre a mesma ordem:
+\textbf{(1)} a fórmula padrão (caixa laranja); \textbf{(2)} a modificação necessária para o nosso caso, com a justificativa (caixa azul);
+\textbf{(3)} a substituição dos números, passo a passo; \textbf{(4)} o resultado (caixa verde).
+Todas as grandezas estão em \% da escala (100\,\% $=5$ V do Arduino), e os tempos em segundos.
+Os números intermediários foram arredondados só na apresentação; todas as contas foram refeitas por computador sem arredondar e conferidas.
+Os resultados experimentais de malha fechada (bancada) ficam nas caixas amarelas, a preencher depois dos ensaios.
+Os dados brutos do ScadaBR (arquivo \texttt{Tiago\_Izabella\_260921.csv}) não estão neste documento: as tabelas que dependem deles (instantes de 28,3\,\% etc.\ e erros RMS contra o experimento) foram tiradas do relatório original.
+\end{tcolorbox}
+
+\tableofcontents
+\newpage
+\input{parte1}
+\input{parte2}
+\end{document}
