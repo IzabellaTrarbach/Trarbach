@@ -10,6 +10,7 @@
 \usepackage{tcolorbox}
 \usepackage{enumitem}
 \usepackage{listings}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue!50!black}
 \setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
@@ -19,6 +20,7 @@
 \newtcolorbox{dica}{colback=blue!4,colframe=blue!50!black,title=Dica / por que,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{esp}{colback=green!5,colframe=green!40!black,title=O que você deve ver (simulação),fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{alerta}{colback=red!5,colframe=red!60!black,title=Atenção,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{real}{colback=purple!5,colframe=purple!60!black,title=Resultado REAL da sua bancada,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{parm}{colback=orange!6,colframe=orange!60!black,title=Parâmetros,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,frame=single,columns=fullflexible,keepspaces=true,
  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c c}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {Á}{{\'A}}1 {É}{{\'E}}1}
@@ -28,10 +30,10 @@
 \begin{center}
 {\LARGE\bfseries Guia de estudo e roteiro de bancada}\\[4pt]
 {\Large Segunda Avaliação de Controle de Processos --- Circuito G ($\Vc3/\Vin$)}\\[6pt]
-Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR
+Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 3: inclui os resultados reais dos ensaios Q11, Q12 e Q13)
 \end{center}
 \begin{tcolorbox}[colback=gray!6,colframe=gray!60]
-\textbf{Para que serve.} \textbf{Parte I} = estudo (o que entender, fórmulas, perguntas prováveis, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{Resolução detalhada} (arquivo \texttt{Resolucao\_Prova2\_detalhada.pdf}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
+\textbf{Para que serve.} \textbf{Parte I} = estudo (glossário de siglas e termos na Seção~\ref{gloss}, fórmulas, perguntas prováveis com explicações, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{Resolução detalhada} (arquivo \texttt{Resolucao\_Prova2\_detalhada.pdf}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
 \textbf{Limite honesto:} os detalhes de tela do OpenPLC/ScadaBR e o mapeamento dos pinos dependem do ambiente montado pelo professor. Onde eu não sei, está escrito ``confirme no seu ambiente''.
 \end{tcolorbox}
 \tableofcontents
@@ -39,6 +41,87 @@ Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR
 
 %=====================================================================
 \part{Guia de estudo}
+\section{Glossário: siglas, símbolos e termos}\label{gloss}
+\begin{center}\small
+\renewcommand{\arraystretch}{1.35}
+\begin{longtable}{p{2.7cm}p{12.3cm}}
+\toprule \textbf{Termo} & \textbf{Significado (com o que é na nossa prova)}\\\midrule\endhead
+\multicolumn{2}{l}{\textbf{Siglas de sinais e do controle}}\\
+FT & \textbf{Função de Transferência}: relação entre saída e entrada no domínio de Laplace, $G(s)=Y(s)/U(s)$. Aqui: $\Vc3(s)/\Vin(s)$.\\
+SP & \emph{Set Point}: valor desejado (referência) para a VP. Em \%.\\
+VP & \emph{Variável de Processo}: o que é medido e controlado. Na prova, $VP=\Vc3$ (tensão do capacitor 3).\\
+SC & \textbf{Sinal de Controle}: saída do controlador que vai ao atuador. Aqui é a tensão $\Vin$ (0--100\,\% = 0--5 V).\\
+SO & No ScadaBR, a variável gravada que corresponde à saída do controlador (em malha fechada, \texttt{SO}=SC; em malha aberta, \texttt{SO}=$\Vin$).\\
+$e$ & \textbf{Erro}: $e=SP-VP$.\\
+\multicolumn{2}{l}{\textbf{Controladores}}\\
+PID & Controlador Proporcional-Integral-Derivativo. $P$: reage ao erro de agora; $I$: elimina o erro em regime (soma o erro no tempo); $D$: antecipa (reage à rapidez da variação).\\
+PI\_D & PID \textbf{paralelo} do OpenPLC: P e I atuam sobre o \emph{erro}; D atua sobre a \emph{VP} (não deriva o degrau do SP).\\
+I\_PD & Só o I atua sobre o erro; P e D atuam sobre a VP. Sem salto no SC quando o SP muda.\\
+2GL / PID2GL & PID com \textbf{2 Graus de Liberdade}: dois ajustes independentes (um para seguir o SP e outro para rejeitar distúrbio). Aqui feito com o filtro $C_f$ no SP e o parâmetro $\alpha$.\\
+$K_p$, $K_i$, $K_d$ & Ganhos proporcional, integral e derivativo da forma paralela. $K_i=K_p/T_i$ e $K_d=K_pT_d$.\\
+$T_i$, $T_d$ & Tempo integral (``reset time'') e tempo derivativo, em segundos. $T_i$ pequeno $\Rightarrow$ integra rápido.\\
+$K_c$, $K_c'$, $\tau_I'$, $\tau_D'$ & Parâmetros do PID na forma \textbf{real/série} (usada nas tabelas 7-1.1 e 7-4.1). Convertem-se para $K_p$, $T_i$, $T_d$ (forma ideal/paralela).\\
+$\mu$ & Constante do filtro derivativo ($\mu=0{,}1$): o filtro tem constante de tempo $\mu T_d$.\\
+$\alpha$ & Parâmetro do 2GL (0 a 1) que regula o quanto o SP é suavizado pelo filtro $C_f$.\\
+$C_f$ & Filtro do SP no 2GL: $\dfrac{(1-\alpha)T_is+1}{T_is+1}$.\\
+Bumpless / VP-tracking & Transferência manual$\to$automático ``sem solavanco'' (\emph{bump} = salto): em manual o SP segue a VP, então $e=0$ na transferência.\\
+Anti reset windup & Proteção do integrador contra \emph{windup} (acúmulo indevido do termo integral) quando o atuador satura.\\
+Saturação & O SC não pode passar de 0 ou 100\,\% (limites do atuador).\\
+\multicolumn{2}{l}{\textbf{Modelo e identificação}}\\
+FOPDT & \emph{First Order Plus Dead Time}: modelo de 1ª ordem com atraso, $G=Ke^{-t_0s}/(\tau s+1)$.\\
+$K$ & \textbf{Ganho estático}: quanto a saída varia, em regime, por unidade de variação da entrada ($K_3=0{,}397$).\\
+$\tau$ & \textbf{Constante de tempo}: ``velocidade'' do processo; em 1ª ordem, a saída atinge 63,2\,\% do valor final em $t=\tau$.\\
+$t_0$ & \textbf{Atraso} (tempo morto): tempo em que a saída ``não responde'' ao degrau.\\
+Polo / zero & Raízes do denominador / do numerador da FT. Polos reais negativos $\Rightarrow$ estável e sem oscilação. Zeros dão as ``constantes de tempo de avanço''.\\
+Grau relativo & Nº de polos $-$ nº de zeros; diz se a curva ao degrau é do tipo C (1) ou S ($\ge2$).\\
+Curva tipo C / S & C: sem ponto de inflexão (inclinação máxima no início). S: tem inflexão (formato de ``S'', parte devagar, acelera, depois freia).\\
+Interatividade & Efeito em que os capacitores/tanques se influenciam mutuamente (realimentações $\beta_1,\beta_2$).\\
+Smith, Sundaresan, Tangente & Três métodos para tirar $\tau$ e $t_0$ de curvas tipo S (usam 28,3 e 63,2\,\%; 35,3 e 85,3\,\%; ou a reta tangente no ponto de inflexão).\\
+$t_{63,2}$, $t_{28,3}$\ldots & Instante em que a resposta normalizada atinge esse \% do valor final.\\
+Padé & Aproximação racional (polinômios) do atraso $e^{-t_0s}$, para simular com \texttt{lsim}.\\
+Laplace, $s$ & Transformada que troca derivadas por multiplicação por $s$; $s=j\omega$ dá a resposta em frequência.\\
+\multicolumn{2}{l}{\textbf{Resposta em frequência e estabilidade}}\\
+Bode & Gráficos de módulo (dB) e fase ($^\circ$) da FT em função de $\omega$ (rad/s).\\
+$\omega_{180}$ & Frequência em que a fase é $-180^\circ$.\\
+$K_{cu}$ & \textbf{Ganho final (ultimate gain)}: menor $K_c$ proporcional que leva a malha à oscilação sustentada.\\
+$T_u$ & \textbf{Período final}: período dessa oscilação sustentada ($T_u=2\pi/\omega_u$).\\
+GM & \textbf{Margem de Ganho}: quanto o ganho de malha pode aumentar antes de instabilizar (maior $=$ mais folga).\\
+PM & \textbf{Margem de Fase}: quanto de fase extra a malha suporta antes de instabilizar (em graus).\\
+Routh (Routh--Hurwitz) & Critério para saber, pelos coeficientes do polinômio característico, quando há raízes no semiplano direito (instabilidade).\\
+Polinômio característico & Denominador da FT de malha fechada; suas raízes são os polos da malha fechada.\\
+\multicolumn{2}{l}{\textbf{Sintonia}}\\
+Dahlin / síntese direta & Escolhe-se a resposta desejada de malha fechada e calcula-se o controlador (Tabela 7-4.1).\\
+$\tau_c$ ($\lambda$) & Constante de tempo \emph{desejada} de malha fechada (parâmetro de projeto da síntese direta; no script do professor é \texttt{lambda}).\\
+IAE & \emph{Integral of Absolute Error}: $\int|e|\,dt$; índice a minimizar nas tabelas 7-2.2 e 7-2.3.\\
+Z--N & \textbf{Ziegler--Nichols}: método do ganho final (Tabela 7-1.1), com razão de decaimento 1/4.\\
+Razão de decaimento 1/4 & Cada pico de oscilação vale 1/4 do anterior.\\
+Servo / regulatório & Servo: seguir mudanças de SP. Regulatório: rejeitar distúrbios com o SP fixo.\\
+Distúrbio ($D$) & Perturbação externa (no item 2.2: o resistor $R_p$ ligado ao nó 3).\\
+$R_p$ & Resistor de distúrbio, em paralelo com $C_3$ (analogia: válvula de saída extra).\\
+$C_v$ & Coeficiente de vazão da válvula (analogia hidráulica: $C_v=1/R$).\\
+\multicolumn{2}{l}{\textbf{Resultados e métricas}}\\
+Sobressinal & Quanto a VP ultrapassa o valor final (em \% do degrau).\\
+$t_s$ & Tempo de acomodação (entra e fica na faixa de $\pm2\,\%$).\\
+RMS & \emph{Root Mean Square}: raiz da média dos quadrados do erro; mede o erro ``típico'' entre dois sinais.\\
+Erro máximo & Maior diferença absoluta entre simulação e experimento.\\
+ADC & Conversor analógico-digital (10 bits $\Rightarrow$ 1024 níveis $\Rightarrow$ 0,098\,\% por nível).\\
+LSB & \emph{Least Significant Bit}: o menor degrau do ADC ($0{,}0976\,\%$ da escala). A VP medida muda em múltiplos de 1 LSB (``escada'').\\
+Ruído de quantização & Erro causado por a VP ser lida em degraus de 1 LSB. Quando derivado, vira picos no SC.\\
+Mediana móvel & Filtro que troca cada ponto pela mediana de uma janela (ex.\ 15 s); remove picos isolados e mantém o valor ``típico'' do SO.\\
+Retificação & Quando um sinal ruidoso é cortado pela saturação, a média muda (ex.: picos para cima em torno do limite inferior elevam a média do SC).\\
+Clamping & Forma de anti-windup: congela o integrador enquanto $u$ está saturado e o erro empurra para mais saturação.\\
+Offset & Deslocamento constante da saída: aqui $VP=0{,}3963\,SO-0{,}262$.\\
+Limites do SC reais & No seu OpenPLC o SO ficou sempre entre $\approx10\,\%$ e $\approx99{,}94\,\%$ ($=100\cdot1023/1024$), e não em 0--100.\\
+PWM & Modulação por largura de pulso (forma do Arduino gerar tensão ``analógica'').\\
+\multicolumn{2}{l}{\textbf{Ferramentas e documentos}}\\
+OpenPLC & Software de CLP (controlador lógico) que roda o PID no Arduino/ESP.\\
+ScadaBR & Software de supervisão que lê as variáveis (1 amostra/s) e gera o relatório CSV.\\
+CSV & Arquivo de texto com dados separados por delimitador (formato do relatório do ScadaBR).\\
+CLP & Controlador Lógico Programável (o do TCC foi um CLP Omron).\\
+TCC & Trabalho de Conclusão de Curso de Juliana Dalmaso da Silva (fonte da metodologia do $\alpha$).\\
+\bottomrule
+\end{longtable}\end{center}
+
 \section{Como a avaliação funciona e como se preparar}
 \begin{itemize}
 \item Sorteiam \textbf{uma questão (1 a 4) e um item}. Você reproduz o experimento na bancada consultando o seu relatório. Se algo der errado, há nova data com novo sorteio.
@@ -99,30 +182,78 @@ Salto do SC no degrau de SP & $\Delta SC_{0^+}=K_p\,\Delta SP$ (derivada na VP n
 \end{tabular}\end{center}
 Todos com $\mu=0{,}1$. \textbf{Se na bancada o $K_{cu}$ e o $T_u$ medidos forem diferentes, recalcule o 4.1 com as fórmulas $K_p=0{,}735K_{cu}$, $T_i=0{,}625T_u$, $T_d=0{,}1T_u$.}
 
-\section{Perguntas prováveis e respostas curtas}
+\section{Perguntas prováveis, com respostas explicadas}
+\textbf{Como ler:} cada pergunta tem a \textbf{Resposta} (o que você falaria em 2--3 frases) e um \textbf{Explicando melhor} (o raciocínio por trás, para você entender e não só decorar).
 \begin{enumerate}[leftmargin=*]
-\item \textbf{Por que $K<1$ e por que $K_3<K_2<K_1$?} Divisor resistivo em regime (capacitores abertos): cada tensão é a fração da resistência que fica ``depois'' do nó. $K_3=R_4/R_t$ é a menor.
-\item \textbf{O que é interatividade?} A tensão de cada capacitor afeta o vizinho (corrente por $R_2$ e $R_3$ volta ao nó anterior); o diagrama de blocos tem realimentações $\beta_1=0{,}32$ ($\Vc2\to\Vc1$) e $\beta_2=0{,}59$ ($\Vc3\to\Vc2$). Efeito: afasta as constantes de tempo (a menor fica menor, a maior fica maior).
-\item \textbf{Como saber se a curva é C ou S sem desenhar?} Pelo grau relativo: 1 $\to$ C (inclinação inicial $\ne0$); $\ge2$ $\to$ S (inflexão).
-\item \textbf{Por que Smith para $\Vc3$ e não tipo C?} Tipo C (RMS 4,9\,\%) ignora o atraso inicial; Smith (RMS 1,1\,\%) usa dois pontos no meio da subida e dá $t_0=25{,}9$ s.
-\item \textbf{Por que a FOPDT subestima $K_{cu}$?} O atraso puro $e^{-t_0s}$ faz a fase cair sem limite; a planta real satura em $-270^\circ$ ($\Vc3$). Logo a FOPDT cruza $-180^\circ$ antes ($K_{cu}=13{,}7$ contra $39{,}0$).
-\item \textbf{Por que então sintonizar com a FOPDT?} É conservadora (se estável na FOPDT, é estável na real) e é o que o enunciado pede; só Z--N exige $K_{cu}$ e $T_u$ reais.
-\item \textbf{De onde vem a Tabela 7-4.1?} Síntese direta: escolho $Y/R=e^{-t_0s}/(\tau_cs+1)$, $C=\frac1G\frac{Y/R}{1-Y/R}$, aproximo o atraso por Padé de 1ª ordem e desprezo o filtro; sai um PI com avanço: $K_c'=\tau/[K(t_0+\tau_c)]$, $\tau_I'=\tau$, $\tau_D'=t_0/2$.
-\item \textbf{O que é $\tau_c$ e como escolhi 40 s?} Constante de tempo desejada de malha fechada. Com 20--30 s o SC passa de 100\,\%; com 60 s fica lento; 40 s dá pico de SC de 94\,\% e sobressinal $<1\,\%$.
-\item \textbf{Por que a derivada atua só na VP?} Para não derivar o degrau do SP (pico enorme no SC). Por isso o SC dá um salto de $K_p\Delta SP$ (e não infinito).
-\item \textbf{Para que serve o filtro $\mu=0{,}1$?} Limita o ganho em alta frequência a $K_p(1+1/\mu)$ e reduz o efeito do ruído/quantização do ADC.
-\item \textbf{O que o $\alpha$ faz no 2GL?} Coloca $C_f$ só no caminho do SP: $C_f\cdot PI=K_p\frac{(1-\alpha)T_is+1}{T_is}$. $\alpha=0$ é o PI\_D comum; $\alpha\to1$ faz o SP entrar só pela integral. A resposta ao distúrbio não muda.
-\item \textbf{Como escolhi $\alpha=0{,}64$?} Metodologia do TCC: sintonia regulatória + $C_f$, variando $\alpha$ e escolhendo o que mais se aproxima da resposta servo (RMS mínimo 0,31\,\%), com SC menor que o do regulatório. O TCC usou 0,7.
-\item \textbf{Qual a diferença servo $\times$ regulatório?} Servo = seguir SP (ganho menor, suave); regulatório = rejeitar distúrbio (ganho maior). Um PID de 1 GL não otimiza os dois; o 2GL sim.
-\item \textbf{Por que a sintonia de ponto fixo (7-2.3) e não a de distúrbio (7-2.2)?} O experimento é degrau no SP. A de distúrbio, aplicada a SP, dá sobressinal de 84\,\% na FOPDT.
-\item \textbf{O que é razão de decaimento 1/4?} Cada pico é 1/4 do anterior (na simulação: $0{,}29/1{,}24=0{,}236$). É o critério do Z--N.
-\item \textbf{Por que Z--N dá sobressinal grande (62\,\%)?} Razão 1/4 é agressiva por projeto; margem de fase só $22^\circ$.
-\item \textbf{O que é o bumpless transfer / VP-tracking (seção 5-3.3)?} Em manual, o SP segue a VP; ao passar para automático $e=0$ e o SC não tem salto. Sem tracking, o SC salta $K_p(SP-VP)$ na transferência.
-\item \textbf{O que é reset windup (seção 5-3.4)?} Com o atuador saturado (SC=100\,\%) o erro persiste e o integrador continua acumulando valor irreal; quando o SP volta ao alcançável, o integrador precisa ``desenrolar'' e a VP fica presa/demora. Anti-windup para de integrar (ou desconta o excesso) durante a saturação.
-\item \textbf{Qual o máximo valor de SP para $\Vc3$?} $K_3\cdot100=39{,}7\,\%$ (2 V). Acima disso o SC satura em 100\,\% e não há como atingir.
-\item \textbf{O que muda no I\_PD?} P e D atuam sobre a VP; só o I atua sobre o erro. A FT SP$\to$VP perde o zero do PI: sem salto no SC, menos sobressinal, resposta mais lenta; a rejeição de distúrbio (loop) é a mesma.
-\item \textbf{Por que o $K$ experimental é 1,3\,\% menor que o teórico?} Tolerância de $R$ e $C$, quantização do ADC e, principalmente, a carga do ADC e a resistência de saída do Arduino (o ADC puxa corrente do nó).
-\item \textbf{Como o $R_p$ representa a ``abertura de 50\,\% de uma válvula''?} Um resistor em paralelo com $C_3$ para o terra é uma válvula de saída extra; com $R_p=2R_4$ ela tem metade da capacidade ($C_v$) da válvula $R_4$.
+\item \textbf{Por que $K<1$ e por que $K_3<K_2<K_1$?}\\
+\textbf{Resposta:} em regime os capacitores viram circuito aberto, então o circuito vira um divisor de tensão resistivo. Cada $V_{cj}$ é a fração da resistência que fica ``depois'' do nó: $K_3=R_4/R_t=0{,}397$ é a menor.\\
+\emph{Explicando melhor:} em regime permanente a corrente nos capacitores é zero ($i=C\,dv/dt=0$). Então a mesma corrente $\Vin/R_t$ passa por todos os resistores, e a tensão em cada nó é $\Vin$ menos a queda nos resistores anteriores. Como ninguém ``amplifica'' tensão num circuito passivo, $K\le1$. Quanto mais para o final da cadeia, mais quedas já aconteceram, então $K_1>K_2>K_3$.
+\item \textbf{O que é interatividade?}\\
+\textbf{Resposta:} é o fato de cada estágio influenciar o anterior. A tensão de $C_2$ devolve corrente a $C_1$ pelo $R_2$ (e $C_3$ a $C_2$ pelo $R_3$), formando realimentações com ganhos $\beta_1=0{,}32$ e $\beta_2=0{,}59$.\\
+\emph{Explicando melhor:} se os estágios fossem independentes, cada um teria $\tau=R_jC_j$ (por exemplo $R_1C_1=20{,}8$ s) e a FT seria o produto de três de 1ª ordem. Mas não são: quando $\Vc2$ sobe, ele ``empurra'' corrente de volta para $C_1$. No diagrama de blocos isso aparece como as setas de retorno. O efeito prático é que as constantes de tempo reais ($68{,}7$; $16{,}0$; $10{,}4$ s) ficam mais afastadas entre si do que as isoladas (Shinskey): uma fica bem maior e outra bem menor.
+\item \textbf{Como saber se a curva é C ou S sem desenhar?}\\
+\textbf{Resposta:} pelo grau relativo (nº de polos $-$ nº de zeros). Grau 1 $\Rightarrow$ curva C; grau $\ge2$ $\Rightarrow$ curva S.\\
+\emph{Explicando melhor:} pelo teorema do valor inicial, a inclinação da resposta ao degrau em $t=0^+$ é diferente de zero só se o grau relativo for 1. Com grau 1 a curva começa subindo na máxima inclinação (sem inflexão = tipo C). Com grau 2 ou 3 a inclinação inicial é zero: a curva ``acelera'' e só depois freia, o que cria o ponto de inflexão (tipo S). $\Vc1$ tem $3-2=1$, $\Vc2$ tem $3-1=2$ e $\Vc3$ tem $3-0=3$.
+\item \textbf{Por que Smith para $\Vc3$ e não o tipo C?}\\
+\textbf{Resposta:} porque $\Vc3$ é curva S: tem atraso aparente. O método C ($\tau=t_{63,2}$, $t_0=0$) ignora esse atraso e erra (RMS 4,9\,\%); Smith dá $t_0=25{,}9$ s e erra só 1,1\,\%.\\
+\emph{Explicando melhor:} a FOPDT precisa ``imitar'' o começo lento da curva S. Ela faz isso com o atraso puro $t_0$. Smith impõe que a FOPDT passe por dois pontos da curva (28,3\,\% e 63,2\,\%); resolvendo as duas equações sai $\tau=1{,}5(t_{63,2}-t_{28,3})$ e $t_0=t_{63,2}-\tau$. Os pontos do meio da subida são pouco sensíveis ao ruído do ADC, ao contrário da tangente, que depende da inclinação máxima.
+\item \textbf{Por que a FOPDT subestima o $K_{cu}$?}\\
+\textbf{Resposta:} porque o atraso puro faz a fase cair sem limite, enquanto na planta real a fase satura em $-270^\circ$. A FOPDT cruza $-180^\circ$ numa frequência menor e prevê $K_{cu}=13{,}7$ contra $39{,}0$ da planta completa.\\
+\emph{Explicando melhor:} instabilidade acontece quando, na frequência onde a fase vale $-180^\circ$, o módulo da malha é $\ge1$. A FOPDT ``gasta'' fase mais rápido (cada $\omega$ custa $\omega t_0$ rad extra), então atinge $-180^\circ$ cedo, onde o módulo ainda é alto. Por isso exige um ganho menor para instabilizar. É um erro \emph{conservador}: sintonizar com a FOPDT deixa a malha real com mais folga.
+\item \textbf{Então por que sintonizar com a FOPDT?}\\
+\textbf{Resposta:} porque é o que o enunciado pede (simplificar a FT), é mais simples e é conservadora. A exceção é o Ziegler--Nichols, que precisa do $K_{cu}$ e $T_u$ da planta real.\\
+\emph{Explicando melhor:} as tabelas do livro (Dahlin, IAE) foram desenvolvidas para modelos FOPDT. O Z--N, ao contrário, não usa modelo: usa o comportamento real da planta no limite de estabilidade. Aplicar Z--N com o $K_{cu}$ da FOPDT dá um controlador que é \emph{fraco demais} para a planta; usar a sintonia de Z--N da planta real na FOPDT a torna instável (por isso a FOPDT não é simulada no item 4.1).
+\item \textbf{De onde vem a Tabela 7-4.1?}\\
+\textbf{Resposta:} da síntese direta. Escolho a resposta desejada de malha fechada $Y/R=e^{-t_0s}/(\tau_cs+1)$ e calculo o controlador $C=\frac1G\frac{Y/R}{1-Y/R}$. Com Padé de 1ª ordem no atraso e desprezando um filtro, sai $K_c'=\frac{\tau}{K(t_0+\tau_c)}$, $\tau_I'=\tau$, $\tau_D'=t_0/2$.\\
+\emph{Explicando melhor:} a ideia é cancelar a dinâmica da planta com o controlador: o termo $(\tau s+1)$ do numerador de $C$ cancela o polo da planta, e o resultado em malha fechada fica sendo só o que eu escolhi. Não dá para cancelar o atraso (o controlador não pode prever o futuro), por isso a resposta desejada mantém $e^{-t_0s}$. O PID resultante é de forma série; convertemos para a forma paralela do OpenPLC.
+\item \textbf{O que é $\tau_c$ e por que 40 s?}\\
+\textbf{Resposta:} $\tau_c$ é a constante de tempo que eu \emph{quero} em malha fechada: menor $=$ mais rápido e mais agressivo. Escolhi 40 s porque com 20--30 s o SC passa de 100\,\% e com 60 s fica lento sem necessidade.\\
+\emph{Explicando melhor:} $\tau_c$ entra no denominador de $K_p$: $\tau_c$ menor $\Rightarrow$ $K_p$ maior $\Rightarrow$ SC com picos maiores e menos margem de ganho. Como o atuador só vai até 100\,\%, o critério prático é: o pico do SC tem de ficar abaixo de 100\,\%. Além disso $\tau_c\gtrsim t_0$ mantém a malha robusta ao atraso, que é a maior incerteza.
+\item \textbf{Por que a derivada atua só na VP?}\\
+\textbf{Resposta:} para não derivar o degrau do SP, que geraria um pico enorme no SC (``chute derivativo'').\\
+\emph{Explicando melhor:} a derivada de um degrau é um impulso (infinito). Se a derivada agisse no erro, todo degrau de SP produziria um pico de SC muito grande (limitado só pelo filtro $\mu$). Derivando só a VP (que é suave), o D continua amortecendo a resposta sem esse efeito. Consequência: no degrau de SP o SC dá apenas o salto proporcional $K_p\Delta SP$ (ex.: $3{,}523\cdot10=35$ pontos).
+\item \textbf{Para que serve o filtro $\mu=0{,}1$?}\\
+\textbf{Resposta:} limita o ganho do termo derivativo em alta frequência a $K_p(1+1/\mu)$ e reduz a amplificação de ruído.\\
+\emph{Explicando melhor:} um derivador ideal tem ganho que cresce com a frequência; o ruído do ADC (0,098\,\%) seria muito amplificado. O filtro $\frac{K_ds}{\mu T_ds+1}$ faz o ganho parar em $K_d/(\mu T_d)=K_p/\mu$. Para $\mu=0{,}1$ isso é $10K_p$, e somando o P fica $11K_p$.
+\item \textbf{O que o $\alpha$ faz no 2GL?}\\
+\textbf{Resposta:} coloca um filtro só no caminho do SP. $\alpha=0$ é o PI\_D comum; $\alpha\to1$ faz o SP entrar apenas pela integral (resposta suave). A resposta ao distúrbio não muda.\\
+\emph{Explicando melhor:} o PI tem um zero em $-1/T_i$. $C_f$ tem um polo em $-1/T_i$ (cancela o zero) e um zero em $-1/((1-\alpha)T_i)$. O produto $C_f\cdot PI=K_p\frac{(1-\alpha)T_is+1}{T_is}$: para $\alpha$ maior, o zero fica mais afastado e o SP vê menos ação proporcional. Como $C_f$ só multiplica o SP, a FT de distúrbio $VP/D=G/(1+(PI+D)G)$ não tem $C_f$.
+\item \textbf{Como escolhi $\alpha=0{,}64$?}\\
+\textbf{Resposta:} pela metodologia do TCC: sintonia regulatória + $C_f$, variando $\alpha$ e escolhendo o que mais aproxima a resposta da sintonia servo, com SC menor que o regulatório.\\
+\emph{Explicando melhor:} primeiro simulo o PID servo ($\tau_c=\tau$, lento e suave) como ``resposta desejada''. Depois simulo o PID regulatório (rápido, que satura) com $C_f$ para vários $\alpha$ e calculo o erro RMS entre as VP. O $\alpha$ de menor erro (0,64; RMS 0,31\,\%) é o escolhido. O TCC usou 0,7 porque a planta dele era diferente; para uma FOPDT com atraso, 0,64 foi melhor.
+\item \textbf{Qual a diferença entre servo e regulatório?}\\
+\textbf{Resposta:} servo: seguir mudanças de SP (ganho menor, suave). Regulatório: rejeitar distúrbios (ganho maior, mais rápido). Um PID de 1 GL não otimiza os dois.\\
+\emph{Explicando melhor:} com ganho alto, o controlador rejeita distúrbios bem, mas num degrau de SP o SC dá um pulo grande ($K_p\Delta SP$) e pode saturar. Com ganho baixo, o SP é seguido de forma suave, mas o distúrbio demora a ser corrigido. O 2GL separa os dois (ganho alto para distúrbio + filtro no SP).
+\item \textbf{Por que a sintonia de ponto fixo (7-2.3) e não a de distúrbio (7-2.2)?}\\
+\textbf{Resposta:} o experimento é degrau no SP. A sintonia de distúrbio, aplicada a um degrau de SP, dá sobressinal de 84\,\% (FOPDT).\\
+\emph{Explicando melhor:} ``ponto fixo'' (\emph{set point}) e ``distúrbio'' são dois problemas diferentes. A correlação de López minimiza o IAE para um distúrbio de carga e por isso usa $K_p$ alto, $T_i$ curto ($38{,}9$ s contra $112$ s). Aplicada ao SP, vira uma resposta muito oscilatória.
+\item \textbf{O que é razão de decaimento 1/4?}\\
+\textbf{Resposta:} cada pico da oscilação é 1/4 do anterior. É o critério de projeto do Z--N. Na simulação deu $0{,}29/1{,}24=0{,}236\approx1/4$.\\
+\emph{Explicando melhor:} é um compromisso empírico: rápido (sobe logo) com oscilação que se extingue em poucos ciclos. Não é o ``mais suave'', é o critério clássico do Ziegler--Nichols.
+\item \textbf{Por que Z--N dá sobressinal grande (62\,\%)?}\\
+\textbf{Resposta:} razão 1/4 é agressiva por projeto; a margem de fase é só $22^\circ$.\\
+\emph{Explicando melhor:} margem de fase baixa significa malha ``quase instável'', com resposta oscilatória. O Z--N foi pensado para rejeitar distúrbios com boa velocidade; no degrau de SP o zero do PI contribui para aumentar o pico (por isso o I\_PD do item 4.2 reduz o sobressinal drasticamente).
+\item \textbf{O que é bumpless / VP-tracking (seção 5-3.3)?}\\
+\textbf{Resposta:} em manual o SP acompanha a VP; ao passar para automático $e=0$ e o SC não tem salto. Sem tracking, o SC salta $K_p(SP-VP)$ na transferência.\\
+\emph{Explicando melhor:} suponha manual com $VP=20\,\%$ e SP deixado em 30\,\%. No instante da transferência, $e=10$ e o termo P dá $3{,}523\cdot10=35$ pontos de salto no SC: o atuador ``dá um pulo'' e a VP responde sem que o operador pediu. Com tracking, SP$=$VP $\Rightarrow$ $e=0$ e a transição é suave; o operador depois muda o SP quando quiser.
+\item \textbf{O que é reset windup (seção 5-3.4)?}\\
+\textbf{Resposta:} com o atuador saturado (SC=100\,\%) o erro persiste e o integrador continua acumulando um valor irreal. Quando o SP volta a um valor alcançável, o integrador precisa ``desenrolar'' e a VP demora a responder. O anti-windup para de integrar (ou desconta o excesso) durante a saturação.\\
+\emph{Explicando melhor:} a ação integral soma o erro no tempo. Se pedimos 45\,\% mas o circuito só chega a 39,7\,\%, o erro nunca zera e a integral cresce (a saída calculada passa de 100\,\%, mas o atuador só entrega 100\,\%). Ao baixar o SP para 30\,\%, o erro fica negativo, mas a integral acumulada ainda é grande e mantém o SC em 100\,\% por muito tempo (na simulação, $\approx465$ s contra $\approx74$ s com anti-windup).
+\item \textbf{Qual o máximo valor de SP para $\Vc3$?}\\
+\textbf{Resposta:} $K_3\cdot100=39{,}7\,\%$ (2 V). Acima disso o SC satura e a VP não chega ao SP.\\
+\emph{Explicando melhor:} o SC máximo é 100\,\% (5 V) e em regime $\Vc3=K_3\cdot\Vin$. Logo $VP_{max}=0{,}397\cdot100$. Na prática, com $K$ medido, $\approx39{,}2\,\%$. Para qualquer SP, o SC em regime é $SP/K$ e precisa ficar entre 0 e 100\,\%.
+\item \textbf{O que muda no I\_PD?}\\
+\textbf{Resposta:} P e D agem sobre a VP; só o I age sobre o erro. A FT de SP para VP perde o zero do PI: sem salto no SC, menos sobressinal, resposta mais lenta. A rejeição de distúrbio não muda.\\
+\emph{Explicando melhor:} o polinômio característico (os polos de malha fechada) é o mesmo do PI\_D, pois depende só do laço. O que muda é o numerador da FT do SP: no PI\_D é $(K_ps+K_i)\ldots$ (tem zero); no I\_PD é só $K_i$. Sem zero, não há ``avanço'', e a resposta fica mais comportada, porém mais lenta ($t_{63}$ 46 s contra 21 s no Z--N).
+\item \textbf{Por que o $K$ experimental é 1,3\,\% menor que o teórico?}\\
+\textbf{Resposta:} tolerância de $R$ e $C$, quantização do ADC e, principalmente, a carga que o ADC e a resistência de saída do Arduino colocam no circuito.\\
+\emph{Explicando melhor:} o divisor resistivo supõe corrente zero nas medições. Na prática o ADC puxa uma pequena corrente do nó e a saída do Arduino tem resistência interna, o que altera levemente as tensões. Por isso usamos sempre o $K$ medido na FOPDT.
+\item \textbf{Como o $R_p$ representa uma ``abertura de 50\,\% de uma válvula''?}\\
+\textbf{Resposta:} um resistor em paralelo com $C_3$ para o terra é uma válvula de saída extra. Com $R_p=2R_4$ ela tem metade da capacidade ($C_v$) da válvula $R_4$.\\
+\emph{Explicando melhor:} na analogia, $C_v=1/R$. A válvula $R_4$ tem $C_v=14{,}97$; 50\,\% de abertura $\Rightarrow$ $C_v=7{,}49$ $\Rightarrow$ $R_p=1/7{,}49=133{,}6$ k$\Omega$ (na escala adotada). Ligá-lo drena corrente do nó 3: o ganho cai de 0{,}397 para 0{,}305 e o controlador precisa subir o SC de 62{,}9 para 81{,}9\,\% para manter a VP em 25\,\%.
+\item \textbf{Para que servem Bode e margens se vou controlar com PID?}\\
+\textbf{Resposta:} para comparar a FT completa com a reduzida e saber se a redução prejudica a estabilidade. Margem de fase e de ganho dizem a folga até a instabilidade.\\
+\emph{Explicando melhor:} a margem de ganho é o fator pelo qual posso multiplicar o ganho da malha antes de instabilizar; a de fase é quanto atraso de fase extra a malha aguenta. Valores típicos desejados: $GM>2$ e $PM>45^\circ$. No 4.1 (Z--N) a $PM=22^\circ$ explica o sobressinal alto; no 1.1 (Dahlin) $PM=81^\circ$ explica a resposta suave.
 \end{enumerate}
 
 \section{Exercícios de treino (refaça à mão)}\label{exerc}
@@ -136,6 +267,64 @@ Todos com $\mu=0{,}1$. \textbf{Se na bancada o $K_{cu}$ e o $T_u$ medidos forem 
 \item Polinômio $10\,000s^3+2000s^2+100s+1$, $K=0{,}4$: $K_{cu}$, $\omega_u$, $T_u$? \emph{Resp.:} $K_{cu}=(2000\cdot100/10\,000-1)/0{,}4=47{,}5$; $\omega_u=\sqrt{100/10\,000}=0{,}1$; $T_u=62{,}8$ s.
 \item No 2GL com $\alpha=0{,}5$ e $T_i=90{,}99$: zero e polo de $C_f$? \emph{Resp.:} zero em $1/45{,}5$, polo em $1/90{,}99$.
 \item $SC$ em regime para $SP=35\,\%$? \emph{Resp.:} $35/0{,}3918=89{,}3\,\%$ (ainda $<100$: alcançável). Para $SP=45$: $114{,}9\,\%$ $\Rightarrow$ satura.
+\end{enumerate}
+
+\section{Lições dos ensaios reais (Q11, Q12, Q13): o SO ``instável'' e quando usar PI}\label{licoes}
+\textbf{Resumo em uma frase:} o SO que pula entre $\approx10\,\%$ e $\approx99{,}9\,\%$ \emph{não é instabilidade da malha}: é \textbf{ruído de quantização do ADC amplificado pela derivada}, cortado pelos limites do SC. A malha está estável (VP suave, SO médio correto).
+
+\subsection{O que os seus dados mostram (evidências)}
+\begin{enumerate}
+\item \textbf{A VP é suave} (desvio-padrão de 0,13 ponto em regime) e o \textbf{SO médio é o correto}: $(SP-\text{offset})/K=(30+0{,}26)/0{,}3971=76{,}2\,\%$ contra 75,4 medido.
+\item \textbf{A mediana do SO é estável} (desvio-padrão da mediana móvel: 1,2 ponto; do SO bruto: 17,5).
+\item \textbf{Os picos são raros e isolados:} 89,6\,\% das amostras da Q11 em malha fechada estão \emph{entre} os limites; só 2,4\,\% em 10\,\% e 8,0\,\% em 99,9\,\%.
+\item \textbf{Os picos acompanham a VP mudar 1 LSB:} probabilidade de pico 0,52 quando a VP muda 1 LSB, contra 0,06 sem mudança (8,7 vezes maior). Quando a VP sobe 1 LSB, o SO cai em média 26 pontos; quando desce, sobe 13 --- o sinal da derivada \emph{sobre a VP}.
+\item \textbf{Ocorre com o erro zero:} logo após fechar a malha com $SP=VP$ (Q11, $t=1606$--1650) o SO já pula (\texttt{50, 50, 10, 99,9, 50\ldots}).
+\end{enumerate}
+\subsection{Por que a derivada faz isso (explicado)}
+\begin{itemize}
+\item O ADC de 10 bits dá degraus de $0{,}0976\,\%$. A VP real varia devagar, então a leitura é uma \textbf{escada}: constante por segundos, depois muda 1 LSB de uma vez.
+\item A derivada de uma escada é uma \textbf{sequência de impulsos}. O termo derivativo filtrado, $\dfrac{K_ds}{\mu T_ds+1}$, responde a um degrau $\Delta V$ com pico $\dfrac{K_d\Delta V}{\mu T_d}$. Com $K_d=39{,}15$, $\mu T_d=1{,}11$ s e $\Delta V=0{,}0976$: pico previsto $=3{,}4$ pontos. Ganho em alta frequência $K_p(1+1/\mu)=38{,}8$.
+\item \textbf{Mas o pico observado é $\sim10$ vezes maior} (mediana 21 pontos, muitos saturando). Se o pico de 1 LSB é $K_d\Delta V/T_{ef}\gtrsim26$ pontos, então $T_{ef}\lesssim0{,}15$ s. Isso indica que, no bloco usado, o filtro derivativo \emph{não está atuando como projetado} (inferência: não temos o código do bloco). Uma derivada por diferença finita com ciclo de 0,1 s daria $39{,}15\cdot0{,}0976/0{,}1=38$ pontos.
+\item \textbf{Por que a VP não oscila:} o circuito é um filtro passa-baixa de 3ª ordem ($\tau\ge10$ s); picos de $\sim0{,}2$ s mudam a VP em centésimos de ponto.
+\item \textbf{Por que ``0 a 99'':} os picos são cortados pelos limites do SC: $\approx10\,\%$ (e não 0) e $\approx99{,}94\,\%$.
+\end{itemize}
+\subsection{Por que ainda assim importa}
+Retificação: o corte dos picos pelos limites \emph{desloca a média} do SC. Exemplo (Q13b): no patamar em que o SC deveria ficar em 99,94\,\%, o SO médio foi 96,6\,\%, e a VP máxima foi 38,2\,\% (e não 39,4\,\%). Também desgasta o atuador e dificulta comparar SC experimental com simulado (use a mediana móvel).
+\subsection{É necessário trocar para PI?}
+\textbf{Não é necessário para a estabilidade, mas é a correção mais simples, e a simulação mostra que quase não muda a resposta:}
+\begin{center}\small\resizebox{\textwidth}{!}{\begin{tabular}{lccccccc}\toprule Controlador (FT completa, 20$\to$30\,\%) & $PM$ & $GM$ & sobress. & $t_{63}$ & $t_s$ & pico SC & ganho HF $\to$ pts/LSB\\\midrule
+PID Dahlin, $\mu=0{,}1$ (usado) & $81{,}4^\circ$ & 59,7 & 0\,\% & 70 s & 172 s & 87,9\,\% & 38,8 $\to$ 3,8\\
+PID $\mu=0{,}5$ & $81{,}5^\circ$ & 16,0 & 0\,\% & 70 s & 178 s & 88,5\,\% & 10,6 $\to$ 1,0\\
+PID $\mu=1{,}0$ & $81{,}5^\circ$ & 10,9 & 0,1\,\% & 69 s & 185 s & 89,0\,\% & 7,0 $\to$ 0,7\\
+\textbf{PI Dahlin} ($K_c=3{,}02$; $T_i=78{,}03$) & $70{,}1^\circ$ & 9,5 & 0\,\% & 71 s & 145 s & 86,7\,\% & \textbf{3,0 $\to$ 0,3}\\\bottomrule\end{tabular}}\end{center}
+\begin{itemize}
+\item \textbf{De onde vem o PI da Tabela 7-4.1:} a mesma dedução de Dahlin com Padé de ordem zero ($e^{-t_0s}\approx1-t_0s$) dá $C=\dfrac{\tau s+1}{K s(\tau_c+t_0)}$, isto é, $K_c=\dfrac{\tau}{K(\tau_c+t_0)}=\dfrac{78{,}03}{0{,}3918\cdot65{,}92}=3{,}02$ e $\tau_I=\tau=78{,}03$ s.
+\item \textbf{Por que a derivada faz pouca falta aqui:} $t_0/\tau=0{,}33$ (atraso pequeno) e a margem de fase já é grande; a derivada só compensa fase perto do cruzamento.
+\item \textbf{Alternativas mantendo o PID:} aumentar $\mu$ (só adianta se o bloco realmente usa o filtro); filtrar a VP antes do PID (média de 8 leituras ou passa-baixa de $\approx1$ s); aumentar o tempo de execução do bloco (0,5 s $\Rightarrow$ pico de 7,6 pontos); filtro RC na entrada do ADC.
+\item \textbf{Teste que confirma o diagnóstico:} repita com $K_d=0$. Se os picos sumirem, a causa é a derivada.
+\end{itemize}
+\textbf{Como responder ao professor:} ``O SO oscila porque o PI\_D deriva a VP quantizada (1 LSB = 0,098\,\%); cada degrau do ADC vira um pico no SC, que é cortado pelos limites do bloco (10 e 99,9\,\%). A malha é estável: a VP é suave e o SO médio é o previsto. Mostrei por simulação que o PI de Dahlin dá a mesma VP com ganho de alta frequência 13 vezes menor.''
+
+\subsection{Perguntas novas, com respostas explicadas}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{O SO oscila entre 0 e 99: a malha é instável?}\\
+\textbf{Resposta:} não. Instabilidade faria a \emph{VP} oscilar crescendo. Aqui a VP é suave e o SO médio é o certo; os picos são ruído do ADC derivado.\\
+\emph{Explicando melhor:} em instabilidade (ex.\ Z--N com $K_{cu}$) a VP oscila com amplitude constante ou crescente. No seu caso, os picos acompanham as transições de 1 LSB da VP e existem até com o erro zero.
+\item \textbf{Como você provou que é a derivada?}\\
+\textbf{Resposta:} pela correlação entre picos e mudanças de 1 LSB na VP (0,52 contra 0,06) e pelo sinal oposto ao da variação da VP.\\
+\emph{Explicando melhor:} no PI\_D a derivada atua com sinal negativo sobre a VP; VP subindo 1 LSB $\Rightarrow$ SO cai (média $-26$), VP descendo $\Rightarrow$ SO sobe ($+13$). A parte proporcional não poderia gerar isso (1 LSB $\times\,K_p=0{,}34$ ponto).
+\item \textbf{Por que o SO fica entre 10 e 99,9?}\\
+\textbf{Resposta:} são os limites do SC no seu sistema; os picos são cortados nesses valores.\\
+\emph{Explicando melhor:} em todos os 4 arquivos o mínimo é 9,99485 e o máximo 99,940875 ($=100\cdot1023/1024$).
+\item \textbf{Precisa mudar para PI?}\\
+\textbf{Resposta:} não para estabilidade, mas é a solução mais simples; o PI de Dahlin dá a mesma VP e reduz o ruído em 13 vezes.\\
+\emph{Explicando melhor:} ver a tabela acima: $t_{63}$ 71 s contra 70 s, margem de fase $70^\circ$, ganho em alta frequência 3,0 contra 38,8.
+\item \textbf{O que é retificação e por que afeta a VP?}\\
+\textbf{Resposta:} cortar picos nos limites muda o valor médio do SC aplicado; o circuito responde à média, então a VP muda.\\
+\emph{Explicando melhor:} em Q13b o SO médio no patamar foi 96,6\,\% (e não 99,94), reduzindo a VP máxima em $0{,}396\cdot3{,}3=1{,}3$ ponto.
+\item \textbf{Mostre numericamente o efeito do windup.}\\
+\textbf{Resposta:} integral acumulada $\approx414$ pontos; para sair da saturação precisa chegar a 168; desce a 0,75 ponto/s $\Rightarrow$ 328 s (medido 337 s).\\
+\emph{Explicando melhor:} $I=20+K_i\sum(SP-VP)\Delta t$ durante os 449 s com SP=55; após a queda do SP, $K_pe=3{,}523\cdot(-19{,}3)=-68$, então $u<99{,}94$ exige $I<168$.
 \end{enumerate}
 
 \section{Erros comuns (pegadinhas)}
@@ -234,6 +423,8 @@ Todos os itens seguem a mesma sequência:
 \begin{esp}VP sobe sem sobressinal relevante ($\le0{,}7\,\%$); $t_{63,2}\approx68$--70 s; acomodação ($\pm2\%$) $\approx170$ s. SC: salto de $+35$ pontos em $t=50$ s (de $\sim$51 para $\sim$86\,\%), pico 88--94\,\%, depois cai a $\sim$75,5--76,6\,\% (=$30/K$). Veja a figura da Seção 8 da Resolução (Fig.\ do item 1.1).\end{esp}
 \textbf{Se o resultado for diferente:} SC saturando em 100\,\% $\to$ degrau maior que o previsto. VP lenta demais $\to$ confira $K_p$. Oscilação $\to$ derivada mal parametrizada ($K_d$ errado).
 
+\begin{real}\textbf{Q11 (seu ensaio):} malha fechada em $t=1606$ s com $SP=VP=19{,}5$; degrau para 30 em $t=1654$ s. O SO saltou de $49{,}5$ para $86{,}5$ ($+37{,}0$; previsto $K_p\Delta SP=36{,}9$), o que confirma $K_p=3{,}53$. VP: sem sobressinal relevante ($VP_{max}=30{,}16$), erro nulo em regime, $t_{63}=79$ s (simulado 70 s), RMS VP $\times$ simulada $=0{,}38\,\%$. SC médio em regime 75,4\,\% (simulado 76,2). \textbf{Atenção:} o SO bruto tem picos entre $\approx10$ e $\approx99{,}9\,\%$; veja a Seção~\ref{licoes}.\end{real}
+
 \subsection{Item 1.2 --- Problema sem bumpless VP-tracking (seção 5-3.3)}
 \textbf{Ideia.} Mostrar que, ao passar de manual para automático com $SP\neq VP$, o SC dá um salto $K_p(SP-VP)$ (um ``bump'' no atuador e na VP). Com VP-tracking (SP seguindo a VP em manual), não há salto.
 \begin{parm}Use a sintonia do 1.1 ($K_p=3{,}523$, $T_i=90{,}99$, $T_d=11{,}11$). Manual: $SO=50{,}4\,\%$ ($VP\approx20\,\%$).\end{parm}
@@ -250,6 +441,8 @@ Parte A: no instante da transferência o SC salta de $50{,}4$ para $\approx85{,}
 \begin{dica}O salto observado depende de como o bloco inicializa o integrador (aqui supus que o integrador assume o valor do SC manual). Se o seu bloco zerar o integrador, o SC pode \emph{cair} ($\approx K_p\cdot e=35\,\%$) em vez de subir; descreva o que viu e explique: em ambos os casos há um \emph{bump} indesejado.\end{dica}
 \textbf{O que gravar:} SO, SP, VP em ambas as partes. \textbf{O que concluir:} sem tracking há um salto $=K_p(SP-VP)$ no SC (bump); com tracking, a transferência é suave.
 
+\begin{real}\textbf{Q12 (seu ensaio):} manual com $SO=20\,\%$, $VP=7{,}71$, SP deixado em 0 (sem tracking); operador pôs $SP=16$ e passou a automático em $t=593$ s. O SO saltou de $20$ para $\approx50$ (mediana $50{,}2$ entre 595 e 615 s; previsto $20+3{,}523\cdot8{,}29=49{,}2$). A VP subiu imediatamente (RMS $\times$ simulação $=0{,}24\,\%$). Na Q11 (com tracking, $SP=VP$) o SO continuou em $\approx50$: sem salto.\end{real}
+
 \subsection{Item 1.3 --- Problema sem anti reset windup (seção 5-3.4)}
 \textbf{Ideia.} Pedir um SP \emph{inalcançável} (acima de $K_3\cdot100\approx39{,}2\,\%$): o SC satura em 100\,\%, o erro persiste e o integrador acumula. Quando o SP volta a um valor alcançável, o integrador está ``carregado'' e a VP demora a responder.
 \begin{parm}Sintonia do 1.1. Sequência de SP: \textbf{25\,\% (regime)} $\to$ \textbf{45\,\%} (por $\sim$300 s) $\to$ \textbf{30\,\%}. SC saturado em 0--100\,\%.\end{parm}
@@ -264,6 +457,8 @@ Parte A: no instante da transferência o SC salta de $50{,}4$ para $\approx85{,}
 \begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g13.png}\end{figure}
 Sem anti-windup: depois do SP voltar a 30\,\%, o SC \emph{continua em 100\,\%} e a VP fica em $\approx39{,}5\,\%$ por mais de 100 s; só chega a $\pm0{,}5$ de 30\,\% cerca de \textbf{465 s} depois da mudança. Com anti-windup: o SC desce imediatamente e a VP chega a 30\,\% em $\approx$\textbf{74 s} (com um pequeno subsinal). (O tempo de recuperação sem proteção cresce com o tempo em que o SP ficou inalcançável.)\end{esp}
 \textbf{O que gravar:} SO (SC), SP e VP nas duas versões. \textbf{O que concluir:} windup = integrador acumulando durante a saturação; o atraso na saída da saturação.
+
+\begin{real}\textbf{Q13a (sem AW) e Q13b (com AW):} SP 55 (inalcançável por 449 s e 501 s) e depois 20. Sem anti-windup o SO ficou \textbf{337 s} em 99,94\,\% depois da queda do SP, a VP ficou em 39,3\,\% por $\approx340$ s e só chegou a $20\pm1\,\%$ em $\approx700$ s. Com anti-windup o SO saiu da saturação \textbf{imediatamente}, a VP começou a cair em 13 s (dinâmica da planta) e chegou a $20\pm1\,\%$ em 123 s. \textbf{Conta para explicar:} integral acumulada $\approx414$ pontos; para sair da saturação precisa $I<99{,}94-K_pe=99{,}94+68=168$; desce $K_i|e|=0{,}03872\cdot19{,}3=0{,}75$ ponto/s $\Rightarrow(414-168)/0{,}75=328$ s (medido: 337 s).\end{real}
 
 \subsection{Item 2.1 --- PID 2GL ($\alpha=0{,}64$)}
 \begin{parm}$K_p=5{,}057$;\ $K_i=0{,}05558$ ($T_i=90{,}99$);\ $K_d=56{,}21$ ($T_d=11{,}11$);\ $\mu=0{,}1$;\ $\alpha=0{,}64$.\quad Degrau de SP: \textbf{20 $\to$ 30\,\%}.\end{parm}
@@ -325,7 +520,7 @@ PI\_D: sobressinal $\approx65\,\%$, $t_{63}\approx21$ s, SC pula $\approx+57$ po
 \subsection{Exportar e preparar o CSV}
 \begin{enumerate}
 \item Gere o relatório CSV no ScadaBR (período do ensaio, aquisição 1 s).
-\item Os dados vêm \textbf{empilhados}: 5 variáveis $\times$ $N$ amostras (\texttt{SO, SP, VP, VP1, VP2}); o script divide por 5, como o do professor.
+\item O CSV real do ScadaBR é em formato ``longo'' (\texttt{Nome do data point, Tempo, Valor, \ldots}) e \textbf{cada variável tem um número diferente de linhas} (ex.: SO 2024, VP 2028). Por isso \textbf{não se pode dividir o arquivo por 5} como no script de exemplo do professor: os scripts desta pasta separam as variáveis pelo \emph{nome} e alinham numa grade de 1 s.
 \item Defina onde começa o trecho a comparar (use o parâmetro \texttt{--inicio} para cortar o período em manual). A simulação assume que no \textbf{primeiro ponto do trecho} a planta está em regime com $SC=SO(1)$.
 \end{enumerate}
 \subsection{Script em Python (testado) --- \texttt{simula\_bancada.py}}
@@ -342,18 +537,20 @@ python3 simula_bancada.py comparar MEUARQUIVO.csv --kp 3.523 --ti 90.99 --td 11.
 # Item 3.1:   --kp 7.222 --ti 111.98 --td 9.917
 # Item 4.1:   --kp 28.654 --ti 43.031 --td 6.885 --sat
 # Item 4.2:   --kp 28.654 --ti 43.031 --td 6.885 --modo I_PD --sat
-# Item 1.3:   --kp 3.523 --ti 90.99 --td 11.114 --sat [--aw clamp]
+# Item 1.3:   --kp 3.523 --ti 90.99 --td 11.114 --sat --aw none (Q13a)  |  --aw clamp (Q13b)
+# Exemplo real: python3 simula_bancada.py comparar Q11.csv --inicio 1605 --kp 3.523 --ti 90.99 --td 11.114 --sat --aw clamp
 \end{lstlisting}
 A saída traz o \textbf{RMS e o erro máximo} de VP e de SC e salva \texttt{comparacao.png} (VP exp.\ $\times$ sim.\ e SC exp.\ $\times$ sim.). \textbf{Edite $R$ e $C$ no topo do arquivo} se os seus valores medidos forem outros.
-\begin{alerta}A leitura do CSV foi testada só com um arquivo sintético no formato descrito (3ª coluna numérica, vírgula decimal, 5 variáveis empilhadas). Se o separador ou as colunas do seu arquivo forem diferentes, ajuste a função \texttt{le\_csv} (é curta). Em 1.2 (bumpless) não há simulação pronta: a comparação é qualitativa.\end{alerta}
+\begin{alerta}A leitura do CSV foi \textbf{testada com os seus arquivos reais} (Q11, Q12, Q13a, Q13b). Use \texttt{--sat} para aplicar os limites reais do SC (10 e 99,94\,\%; mudam com \texttt{--umin/--umax}) e \texttt{--aw clamp} ou \texttt{--aw none} para o anti-windup. O SC experimental é muito ruidoso: o script compara o SC simulado com a \textbf{mediana móvel} do SO (e mostra também o RMS do SO bruto). Em 1.2 (bumpless) a simulação com \texttt{--inicio} no instante da transferência reproduz o salto.\end{alerta}
 \subsection{Script MATLAB --- \texttt{compara\_malha.m} (estilo do professor)}
 Mesma lógica (planta completa, simulação discreta). \textbf{Não foi executado no MATLAB} (não disponível aqui); a lógica é a do Python acima. Teste primeiro com o caso 1.1 e confira se a simulação dá pico de SC $\approx88\,\%$.
 \begin{lstlisting}
-% Edite: Kp, Ti, Td, alpha, modo, sat, aw, Rp, tRp, inicio e o nome do CSV
-tablex=readtable('MALHAFECHADA.csv'); cellx=table2cell(tablex);
-matx=cell2mat(cellx(:,3)); div=size(matx,1)/5;      % igual ao do professor
-SO=matx(1:div); SP=matx(div+1:2*div); VP=matx(2*div+1:3*div);
-% ... (ver arquivo compara_malha.m: simulacao discreta + graficos + RMS)
+% Edite no topo: arquivo, inicio, R, C, Kp, Ti, Td, mu, alpha, modo, umin/umax, aw, Rp, tRp.
+% A leitura usa o formato REAL do ScadaBR (separa as variaveis pelo nome do ponto, grade de 1 s).
+T=readtable(arquivo,'Delimiter',',','Encoding','ISO-8859-1','VariableNamingRule','preserve','DecimalSeparator','.');
+nomes=strtrim(string(T{:,1})); tempo=datetime(string(T{:,2}),'InputFormat','yyyy/MM/dd HH:mm:ss'); valor=T{:,3};
+SO=serie(nomes,tempo,valor,'SO'); SP=serie(nomes,tempo,valor,'SP'); VP=serie(nomes,tempo,valor,'VP');
+% ... (ver scripts/compara_malha.m: simulacao discreta + graficos + RMS)
 \end{lstlisting}
 \subsection{Diferenças entre o script do professor e o meu}
 \begin{itemize}
@@ -387,6 +584,7 @@ SO=matx(1:div); SP=matx(div+1:2*div); VP=matx(2*div+1:3*div);
 VP$\approx0$ com SO alto & Terra não comum; entrada analógica no pino errado; capacitor com polaridade invertida.\\
 VP saturada em 100\,\% ou valores absurdos & Escala errada (0--1023 em vez de \%); ou mapeamento de pino trocado.\\
 Ruído de $\pm0{,}1$--0,2\,\% na VP & Normal (ADC 0,098\,\%); em Z--N o $K_d$ alto amplifica; confira $\mu$ e o aterramento.\\
+SO pula entre $\approx10$ e $\approx99{,}9\,\%$ com a VP suave & \textbf{Ruído de quantização amplificado pela derivada} (Seção~\ref{licoes}). Teste com $K_d=0$ (PI). Não é instabilidade da malha.\\
 SC ``treme'' muito (3.1, 4.1) & Ganho de alta frequência $K_p(1+1/\mu)$; use os valores da tabela; não aumente $K_d$.\\
 Resposta mais lenta/rápida que a simulação em $\sim$5--10\,\% & Tolerância de $R$, $C$; $K$ real $\ne$ teórico. Refaça a simulação com os valores medidos.\\
 Oscilação em 1.1/2.1/3.1 & $K_i$ ou $K_d$ digitados errado; o bloco usa $T_i$ em vez de $K_i$ (ou o contrário).\\

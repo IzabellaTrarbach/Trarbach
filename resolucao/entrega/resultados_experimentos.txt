@@ -1,0 +1,34 @@
+== 0) Ganho estatico (regime, manual): VP = 0.3963*SO -0.262  (teorico K3=0.3971)
+== 0b) Planta (modelo teorico) excitada com o SO MEDIDO x VP medido
+   Q11   RMS 0.50 %  erro max 1.56 %
+   Q12   RMS 0.20 %  erro max 0.65 %
+   Q13a  RMS 0.81 %  erro max 4.13 %
+   Q13b  RMS 0.50 %  erro max 0.97 %
+== 1) Q11 / item 1.1: auto em t=1606 s (SO manual = 50.0); SP 19.5 -> 30.0 em t=1654 s
+   salto do SO no degrau do SP: 49.5 -> 86.5  (+37.0);  Kp*dSP = 3.52*10.48 = 36.9  => Kp efetivo = 3.53
+   VP exp: sobressinal 1.5% t63 79 s ts(2%, VP suavizada 15 s) 380 s | VP sim: sobressinal 0.0% t63 70 s ts 173 s
+   VP exp bruta: max 30.16 % (sobressinal 1.5%)
+   VP: RMS 0.38 %  erro max 0.91 % | SC (mediana movel 21 s) RMS 3.08 % | SC medio final exp 75.4 sim 76.2
+== 2) SO em regime com a malha FECHADA: picos x variacao de 1 LSB (0.0976 %) da VP
+   Q11   [1900:2191] picos 20% das amostras | VP mudou 1 LSB em 14% | P(pico|LSB perto)=0.52  P(pico|sem LSB)=0.06 | sd(SO)=17.5 sd(mediana)=1.2 sd(VP)=0.13
+   Q13a  [100:560] picos 46% das amostras | VP mudou 1 LSB em 29% | P(pico|LSB perto)=0.64  P(pico|sem LSB)=0.27 | sd(SO)=24.2 sd(mediana)=3.4 sd(VP)=0.24
+   Q12   [620:1075] picos 42% das amostras | VP mudou 1 LSB em 36% | P(pico|LSB perto)=0.56  P(pico|sem LSB)=0.22 | sd(SO)=23.4 sd(mediana)=6.8 sd(VP)=1.61
+   Q11: VP subiu 1 LSB (n=21): desvio medio do SO = -26.1 pontos | VP desceu 1 LSB (n=20): +12.7 pontos
+   Previsto com filtro mu=0.1: pico = Kd*LSB/(mu*Td) = 3.4 pontos; sem filtro, derivada por diferenca com Ts=0.1 s: Kd*LSB/Ts = 38.2 pontos
+== 3) Q12 / item 1.2: manual SO=20.0% VP=7.71%; SP(operador)=16.0% (em manual o SP ficou em 0); auto em t=593 s
+   SO apos a transferencia (t=593..600): [20.  30.1 10.  49.7 49.9 99.9 50.4 31.5] | mediana 595-615 = 50.2
+   Previsto: salto = Kp*(SP-VP) = 3.52*(16.00-7.71) = 29.2  => SO = 49.2
+   VP: RMS 0.24 % erro max 0.45 % | VP exp max 16.30 sim max 16.00
+== 4) Q13a (sem anti-windup): SP 55 em t=822, SP 20 em t=1271 (inalcancavel por 449 s); VP max 39.33%
+   EXP: SO sai da saturacao 337 s apos a queda do SP | VP comeca a cair (-0.5) em 342 s | VP dentro de +-1 de 20% em 700 s | SO medio no patamar 99.9%
+== 4) Q13b (com anti-windup): SP 55 em t=43, SP 20 em t=544 (inalcancavel por 501 s); VP max 38.16%
+   EXP: SO sai da saturacao 0 s apos a queda do SP | VP comeca a cair (-0.5) em 13 s | VP dentro de +-1 de 20% em 123 s | SO medio no patamar 96.6%
+   SIM Q13a / sem AW: SC sai da saturacao 326 s apos a queda | VP cai 0.5 em 355 s | VP RMS 0.43 %
+   SIM Q13a / com AW: SC sai da saturacao 0 s apos a queda | VP cai 0.5 em 12 s | VP RMS 11.03 %
+   SIM Q13b / sem AW: SC sai da saturacao nunca s apos a queda | VP cai 0.5 em nunca s | VP RMS 9.23 %
+   SIM Q13b / com AW: SC sai da saturacao 0 s apos a queda | VP cai 0.5 em 12 s | VP RMS 1.62 %
+== 5) PID x PI (FT completa; degrau 20->30 %%; ganho HF e pontos de SC por 1 LSB da VP)
+   PID Dahlin mu=0.1 (usado)        PM 81.4 GM 59.7 (FOPDT: PM 78.4 GM 3.7) | sobress 0.0% t63 70 s ts 172 s pico SC 87.9 | ganho HF 38.8 => 3.8 pontos de SC por LSB
+   PID mu=0.5                       PM 81.5 GM 16.0 (FOPDT: PM 78.5 GM 3.2) | sobress 0.0% t63 70 s ts 178 s pico SC 88.5 | ganho HF 10.6 => 1.0 pontos de SC por LSB
+   PID mu=1.0                       PM 81.5 GM 10.9 (FOPDT: PM 78.5 GM 3.0) | sobress 0.1% t63 69 s ts 185 s pico SC 89.0 | ganho HF 7.0 => 0.7 pontos de SC por LSB
+   PI Dahlin (Kc=3.021, Ti=78.03)   PM 70.1 GM 9.5 (FOPDT: PM 67.5 GM 4.0) | sobress 0.0% t63 71 s ts 145 s pico SC 86.7 | ganho HF 3.0 => 0.3 pontos de SC por LSB
