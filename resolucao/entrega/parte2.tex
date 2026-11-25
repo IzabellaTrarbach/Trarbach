@@ -133,10 +133,10 @@ $SC_{final}=SP_1/K$: $30/0{,}3918=76{,}6$ (FOPDT) e $30/0{,}3971=75{,}5$ (comple
 
 \textbf{Margens da malha aberta $L=(PI+D)G$:} FOPDT: $GM=3{,}7$ (11,4 dB), $PM=78{,}4^\circ$; FT completa: $GM=59{,}7$ (35,5 dB), $PM=81{,}4^\circ$. A margem de fase é praticamente igual nos dois modelos; a margem de ganho da FOPDT é muito menor, como visto na Seção 6.2.
 \begin{just}Os dois modelos concordam no formato e na escala de tempo da VP. A FOPDT mostra um pequeno sobressinal e um pico de SC maior (94 contra 88\,\%) porque seu atraso puro e o ganho um pouco diferente alteram a ação proporcional+derivativa.\end{just}
-\begin{res}\textbf{Experimento realizado (arquivo \texttt{Q11.csv}).} Procedimento: manual com $SO=50\,\%$ ($VP=19{,}4\,\%$), malha fechada com $SP=VP$ e degrau $19{,}5\to30\,\%$. Resultado: sem sobressinal significativo, erro nulo em regime, salto do SC de $37{,}0$ pontos (previsto $K_p\Delta SP=36{,}9$), VP experimental $\times$ simulada com RMS de $0{,}38\,\%$. O sinal \texttt{SO} apresenta picos por ruído da derivada. Análise completa na Seção~\ref{expdados} e seguintes (Seções~14 a 20).\end{res}
+\begin{res}\textbf{Experimento realizado (arquivo \texttt{Q11.csv}).} Procedimento: manual com $SO=50\,\%$ ($VP=19{,}4\,\%$), malha fechada com $SP=VP$ e degrau $19{,}5\to30\,\%$. Resultado: sem sobressinal significativo, erro nulo em regime, salto do SC de $37{,}0$ pontos (previsto $K_p\Delta SP=36{,}9$), VP experimental $\times$ simulada com RMS de $0{,}38\,\%$. O sinal \texttt{SO} apresenta picos por ruído da derivada. Análise completa na Seção~\ref{expdados} e seguintes (Seções~\ref{expdados} a \ref{conclq1}).\end{res}
 
 %------------------------------------------------------------------
-\section{Item 2.1: PID 2GL (método do $\alpha$ de Juliana Dalmaso)}
+\section{Item 2.1: PID 2GL (método do $\alpha$ de Juliana Dalmaso)}\label{it21}
 \subsection{O que é pedido}
 ``Uma sintonia do PID 2GL seguindo a mesma metodologia adotada no TCC de Juliana Dalmaso da Silva para escolha do alfa e verifique o sucesso da sintonia confrontando simulação com o experimental quando é aplicado um degrau no SP.''
 
@@ -181,7 +181,7 @@ Com a FT completa: $t_{63}=102{,}6$ s e pico do SC de 75,5\,\%.
 \begin{todo}Passar a automático com $SP=VP$ e os parâmetros acima, com \texttt{alfa := 0.36} (\textbf{não 0,64}); aplicar degrau de SP 20 $\to$ 30\,\%; gravar SO, SP, VP. Confrontar VP e SC com a simulação (FOPDT e FT completa). Se possível repetir com \texttt{alfa := 1.0} (PI\_D regulatório comum) para mostrar o efeito de $\alpha$ (SC chegando a 114\,\%, isto é, saturando). Resultados: \underline{\hspace{6cm}}\end{todo}
 
 %------------------------------------------------------------------
-\section{Item 3.1: integral do erro mínimo (seção 7-2.3)}
+\section{Item 3.1: integral do erro mínimo (seção 7-2.3)}\label{it31}
 \subsection{O método}
 Na seção 7-2.3 o livro apresenta correlações que minimizam um índice de integral do erro, aqui $\mathrm{IAE}=\int_0^\infty|e|\,dt$, para plantas FOPDT. Para o PID ideal, com $r=t_0/\tau$ (válido para $0{,}1<r<1$):
 \begin{formula}
@@ -221,10 +221,10 @@ IAE distúrbio (7-2.2) & 83,6 / 42,3 & 37,8 / 33,3 & 227 / 201 & 129 / 107\\
 Dahlin $\tau_c=40$ s (item 1.1) & 0,7 / 0,0 & 67,9 / 69,6 & 170 / 173 & 73 / 69\\\bottomrule\end{tabular}\end{center}
 Margens da malha aberta com a sintonia de ponto fixo: FOPDT $GM=1{,}9$, $PM=64^\circ$; FT completa $GM=32{,}0$, $PM=71^\circ$.
 \begin{just}A sintonia de ponto fixo é a mais rápida ($t_{63}=44$ s contra 68 s do Dahlin), à custa de sobressinal maior (8,1\,\% na FOPDT, 2,6\,\% na completa) e de $K_p$ mais alto --- esperado de um método que minimiza o erro integral sem penalizar o esforço de controle. A sintonia de distúrbio é ainda mais agressiva e, aplicada a um degrau de SP, produz sobressinal de 84\,\% na FOPDT: foi projetada para rejeitar distúrbios, não para seguir SP (a ideia do TCC: servo e regulatório exigem sintonias diferentes). A diferença de sobressinal entre FOPDT e completa vem do atraso puro da FOPDT, que reduz a margem de ganho (1,9 contra 32).\end{just}
-\begin{todo}Mesmo procedimento do item 1.1 com $K_p=7{,}222$, $K_i=0{,}06449$, $K_d=71{,}63$, $\mu=0{,}1$ e degrau de SP 20 $\to$ 25\,\%. Confrontar VP e SC com a figura. Resultados: \underline{\hspace{6cm}}\end{todo}
+\begin{todo}\textbf{Roteiro completo, previsão e planilha: Seção~\ref{q31exp}.} Mesmo procedimento do item 1.1 com $K_p=7{,}222$, $K_i=0{,}06449$, $K_d=71{,}63$, $\mu=0{,}1$ e degrau de SP 20 $\to$ 25\,\%. Confrontar VP e SC com a figura. Resultados: \underline{\hspace{6cm}}\end{todo}
 
 %------------------------------------------------------------------
-\section{Item 4.1: Ziegler--Nichols de razão de decaimento 1/4 (Tabela 7-1.1)}
+\section{Item 4.1: Ziegler--Nichols de razão de decaimento 1/4 (Tabela 7-1.1)}\label{it41}
 \subsection{O método}
 A Tabela 7-1.1 usa o \textbf{ganho final} $K_{cu}$ e o \textbf{período final} $T_u$: com controle só proporcional, aumenta-se $K_c$ até a VP oscilar com amplitude constante; $K_{cu}$ é esse ganho e $T_u$ o período da oscilação. Para o PID (forma real/série), razão de decaimento 1/4 (cada pico é 1/4 do anterior):
 \begin{formula}$K_c'=\dfrac{K_{cu}}{1{,}7},\qquad\tau_I'=\dfrac{T_u}{2},\qquad\tau_D'=\dfrac{T_u}{8}$, convertidos à forma ideal pela Seção 7.5.\end{formula}
@@ -267,7 +267,7 @@ Degrau de SP de 10 para 12\,\% em $t=50$ s (pequeno porque o ganho alto faria o 
 \textbf{Por que não simular com a FOPDT.} Os polos de malha fechada da FOPDT com esta sintonia têm parte real positiva ($+0{,}027\pm0{,}087j$ s$^{-1}$): a malha é \emph{instável}, porque $K_c'=22{,}9$ e $K_p=28{,}7$ são maiores que o ganho final da FOPDT ($K_{cu,red}=13{,}7$). Com a FT completa, todos os polos de malha fechada têm parte real negativa (o maior é $-0{,}0176$).
 \begin{figure}[H]\centering\includegraphics[width=.5\textwidth]{figs/i41_unst.png}\caption{O mesmo PID aplicado à FOPDT (instável) e à FT completa.}\end{figure}
 \begin{just}A sintonia de Z--N foi \emph{projetada} para uma planta real em que se mediu $K_{cu}$ e $T_u$; o modelo FOPDT, ao trocar 3 polos por 1 polo e atraso, tem margem de ganho menor, então a sintonia que é estável na planta completa torna a FOPDT instável. Os parâmetros de Z--N só são válidos com $K_{cu}$ e $T_u$ da planta real. A resposta tem sobressinal grande (62\,\% do degrau), característico da razão 1/4; o SC chega a tocar o limite inferior no primeiro retorno, o que na bancada produzirá saturação e leve diferença em relação à simulação linear.\end{just}
-\begin{todo}(i) Teste de ganho final: apenas $K_p$ ($K_i=K_d=0$), aumentar até oscilação sustentada, anotar $K_{cu}$ e $T_u$ (esperado: Figura do teste acima); (ii) recalcular os parâmetros com as fórmulas acima e implementar $K_p$, $K_i$, $K_d$, $\mu=0{,}1$; (iii) degrau de SP 10 $\to$ 12\,\%, gravar SO, SP, VP; (iv) confrontar VP e SC com a figura de simulação acima. Resultados: \underline{\hspace{6cm}}\end{todo}
+\begin{todo}\textbf{Roteiro completo, previsão e planilha: Seção~\ref{q41exp} (e I\_PD na Seção~\ref{q42exp}).} (i) Teste de ganho final: apenas $K_p$ ($K_i=K_d=0$), aumentar até oscilação sustentada, anotar $K_{cu}$ e $T_u$ (esperado: Figura do teste acima); (ii) recalcular os parâmetros com as fórmulas acima e implementar $K_p$, $K_i$, $K_d$, $\mu=0{,}1$; (iii) degrau de SP 10 $\to$ 12\,\%, gravar SO, SP, VP; (iv) confrontar VP e SC com a figura de simulação acima. Resultados: \underline{\hspace{6cm}}\end{todo}
 
 %------------------------------------------------------------------
 \section{Resumo dos controladores (para o OpenPLC)}
@@ -284,5 +284,5 @@ Derivada na VP; $T_i$ e $T_d$ em segundos e $K_p$ em \%SC/\%VP. Nos projetos use
 \item As FTs completas, deduzidas das equações dos nós com os $R$ e $C$ medidos, têm três polos reais ($\tau=68{,}7$; $16{,}0$; $10{,}4$ s) e reproduzem o degrau experimental com RMS de 0,7--1,7\,\% do degrau.
 \item $\Vc1$ é curva tipo C ($\tau=23{,}3$ s, sem atraso); $\Vc2$ e $\Vc3$ são tipo S (Smith: $\Vc3$: $K=0{,}392$, $\tau=78{,}0$ s, $t_0=25{,}9$ s).
 \item A FOPDT mantém a margem de fase da malha aberta (diferenças de até $6^\circ$ para $K_c\le5$) e subestima a margem de ganho (é conservadora). Por isso as sintonias dos itens 1.1, 2.1 e 3.1 são calculadas com a FOPDT (como pede o enunciado), enquanto $K_{cu}$ e $T_u$ do item 4.1 devem vir da planta real.
-\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa). Os ensaios da Questão 1 (itens 1.1, 1.2 e 1.3) já foram realizados e analisados nas Seções 14 a 20; as comparações experimentais dos itens 2.1, 2.2, 3.1, 4.1 e 4.2 ficam para os ensaios correspondentes.
+\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa). Os ensaios da Questão 1 (itens 1.1, 1.2 e 1.3) já foram realizados e analisados nas Seções~\ref{expdados} a \ref{conclq1}; as comparações experimentais dos itens 2.1, 2.2, 3.1, 4.1 e 4.2 ficam para os ensaios correspondentes.
 \end{itemize}

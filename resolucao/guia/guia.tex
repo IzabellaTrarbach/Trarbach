@@ -30,12 +30,13 @@
 \begin{center}
 {\LARGE\bfseries Guia de estudo e roteiro de bancada}\\[4pt]
 {\Large Segunda Avaliação de Controle de Processos --- Circuito G ($\Vc3/\Vin$)}\\[6pt]
-Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 5: resultados reais, análise do código \texttt{Prova2.st} e programa corrigido \texttt{Prova2\_corrigido.st})
+Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 6: resultados reais com simulação ideal, ruído e código \texttt{Prova2.st}, correção do bloco PID e itens 3.1, 4.1 e 4.2 a realizar)
 \end{center}
 \begin{tcolorbox}[colback=gray!6,colframe=gray!60]
 \textbf{Para que serve.} \textbf{Parte I} = estudo (glossário de siglas e termos na Seção~\ref{gloss}, fórmulas, perguntas prováveis com explicações, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{entrega} (pasta \texttt{entrega/}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
 \textbf{Limite honesto:} os detalhes de tela do OpenPLC/ScadaBR e o mapeamento dos pinos dependem do ambiente montado pelo professor. Onde eu não sei, está escrito ``confirme no seu ambiente''.
 \end{tcolorbox}
+\begin{tcolorbox}[colback=gray!6,colframe=gray!60]\textbf{Convenção.} ``Simulação ideal'' = planta completa sem ruído de ADC e com o filtro derivativo de projeto (é a referência de projeto do relatório). ``Simulação fiel ao PLC'' = inclui o ruído do ADC e a lógica do programa (derivada de 4 pontos sem filtro); serve para explicar o ruído do SO. Os itens 2.1, 2.2, 3.1, 4.1 e 4.2 ainda serão ensaiados; os 1.1 a 1.3 já foram.\end{tcolorbox}
 \tableofcontents
 \newpage
 
@@ -331,6 +332,10 @@ Cenário & SO sd & sobress. & $t_{63}$ & SO sd & sobress. & $t_{63}$ & (sem ruí
 4.2 I\_PD (\texttt{alfa=0}), 10$\to$12\,\% & 23,4 & \textbf{15,8\,\%} & 54 s & \textbf{2,6} & 0,0\,\% & 46 s & 46 s; 1,6\,\%\\\bottomrule\end{tabular}}\end{center}
 \textbf{Mensagem:} o programa original não só deixa o SO ruidoso: ele \emph{distorce o resultado} dos ensaios (Z--N com 82\,\% de sobressinal em vez de 62\,\%; I\_PD com 16\,\% em vez de $\approx2\,\%$; 2GL com $t_{63}$ de 132 s em vez de 104 s, porque os picos congelam a integral). \textbf{Use o \texttt{Prova2\_corrigido.st} nos itens 2.1, 2.2, 3.1, 4.1 e 4.2.} Os itens 1.1 a 1.3 já foram feitos com o original; se quiser, repita o 1.1 com o corrigido e confira: SO sem picos (desvio-padrão $\lesssim1$), $t_{63}\approx70$ s e nenhum pulso de 10\,\% ao fechar a malha. \textbf{Limite:} previsão por simulação; o arquivo não foi compilado nem testado na bancada.
 
+\subsection{Comentário sobre a correção do bloco PID do OpenPLC}\label{comcorr}
+\textbf{Comentário.} O bloco PID do programa calcula a derivada com uma diferença de 4 pontos a cada 20 ms \emph{sem filtro} e a zera em manual. Com uma VP lida por ADC de 10 bits isso é inadequado: cada degrau (ou alternância) de 1 LSB vira um pulso de até $0{,}4\,k_d\,\mathrm{LSB}/T_s$ pontos no SC. A correção é a que a teoria do PID prático já prevê, o \textbf{filtro derivativo}: um passa-baixa de 1ª ordem sobre a VP, com a mesma constante $\mu T_d=1{,}11$ s dos projetos, antes da derivada, e a derivada ``armada'' em manual (sem pulso ao fechar a malha). Está em \texttt{Prova2\_corrigido.st} e no projeto corrigido; \textbf{a previsão é só de simulação}.
+\begin{real}\textbf{Quando refizer o ensaio com o programa corrigido (a fazer):} (1) repetir o item 1.1 com os mesmos \texttt{kp}, \texttt{ki}, \texttt{kd}, e comparar com o ensaio Q11; (2) conferir: desvio-padrão do SO $\lesssim1$ ponto, $t_{63}\approx70$ s, nenhum pulso de 10\,\% ao fechar a malha; (3) rodar \texttt{simula\_bancada.py} e \texttt{analise\_plc.py}; (4) registrar: SO sd \underline{\hspace{1.3cm}}; $t_{63}$ \underline{\hspace{1.3cm}}; RMS VP \underline{\hspace{1.3cm}}; observações \underline{\hspace{4cm}}.\end{real}
+
 \subsection{Perguntas novas, com respostas explicadas}
 \begin{enumerate}[leftmargin=*]
 \item \textbf{O SO oscila entre 0 e 99: a malha é instável?}\\
@@ -351,6 +356,15 @@ Cenário & SO sd & sobress. & $t_{63}$ & SO sd & sobress. & $t_{63}$ & (sem ruí
 \item \textbf{Mostre numericamente o efeito do windup.}\\
 \textbf{Resposta:} integral acumulada $\approx414$ pontos; para sair da saturação precisa chegar a 168; desce a 0,75 ponto/s $\Rightarrow$ 328 s (medido 337 s).\\
 \emph{Explicando melhor:} $I=20+K_i\sum(SP-VP)\Delta t$ durante os 449 s com SP=55; após a queda do SP, $K_pe=3{,}523\cdot(-19{,}3)=-68$, então $u<99{,}94$ exige $I<168$.
+\item \textbf{(Q4) Como achar o $K_{cu}$ na bancada com o SC limitado a 10--100\,\%?}\\
+\textbf{Resposta:} escolha um ponto de operação com folga (SP$_0=20\,\%$, SC$_0=51\,\%$) e um degrau pequeno ($+1$ ponto), de modo que a oscilação sustentada ($\pm35$ pontos de SC) não sature; $K_{cu}$ é o menor \texttt{kp} com amplitude constante.\\
+\emph{Explicando melhor:} em $K_{cu}$ o SC oscila $\pm K_{cu}\cdot0{,}9\approx\pm35$ pontos. Em $SP_0=10\,\%$ ($SC_0=26\,\%$) o mínimo iria a $-9$ e o SC satura em 10: a oscilação ficaria deformada e o $K_{cu}$ mal medido.
+\item \textbf{(Q4) Por que o Z--N dá tanto sobressinal e por que o I\_PD o reduz?}\\
+\textbf{Resposta:} razão de decaimento 1/4 é agressiva ($PM=22^\circ$): $\approx64\,\%$ de sobressinal. O I\_PD tira o zero do PI do caminho do SP: sobressinal $\approx1{,}2\,\%$ e SC sem salto, mas $t_{63}$ de 21 para 46 s.\\
+\emph{Explicando melhor:} o denominador (polos) é o mesmo nos dois, então a estabilidade e a resposta ao distúrbio não mudam; só o numerador de $Y/R$ muda: $K_i/s$ no I\_PD contra $(K_ps+K_i)/s$ no PI\_D.
+\item \textbf{(Q3) O que o IAE mínimo otimiza e qual o custo?}\\
+\textbf{Resposta:} minimiza $\int|e|\,dt$ para o degrau de SP: resposta rápida ($t_{63}\approx44$ s), mas com sobressinal e SC alto ($\approx87\,\%$); não penaliza o esforço de controle.\\
+\emph{Explicando melhor:} compare com o Dahlin ($t_{63}=70$ s, pico de SC 88,6 sem sobressinal): o IAE ``paga'' com sobressinal para ganhar tempo. A sintonia de distúrbio (7-2.2) aplicada ao SP daria 84\,\%.
 \end{enumerate}
 
 \section{O programa do PLC (\texttt{Prova2.st}) explicado}\label{codigoplc}
@@ -453,7 +467,7 @@ GND & terra do circuito (lado de $R_4$ e dos $C$) & ---\\\bottomrule\end{tabular
 \section{Procedimento comum de malha fechada}\label{comum}
 Todos os itens seguem a mesma sequência:
 \begin{enumerate}
-\item \textbf{Condição inicial (manual):} $SO=SP_0/K$ ($K=0{,}3918$ medido) por $\ge8$ min até $\Vc3$ estabilizar em $SP_0$.
+\item \textbf{Condição inicial (manual):} $SO_0=(SP_0+0{,}262)/0{,}3963$ (ajuste dos seus patamares: $VP=0{,}3963\,SO-0{,}262$) por $\ge8$ min até $\Vc3$ estabilizar em $SP_0$.
 \item \textbf{Carregue o programa certo:} \texttt{Prova2\_corrigido.st} para 2.1 a 4.2 (sem ruído no SO); \texttt{Prova2.st} original só se for reproduzir 1.1 a 1.3 como foram feitos. Digite os parâmetros do item (Seção~\ref{tabpar}). \textbf{Releia-os na tela} (um dígito errado é o erro mais comum).
 \item Ajuste $SP=VP$ (valor atual) \textbf{antes} de passar para automático (isto é o VP-tracking manual). Grave o ScadaBR (inicie o registro $\sim$30 s antes).
 \item Passe para \textbf{automático}. Confirme que o SC \textbf{não deu salto} (sistema bumpless).
@@ -548,36 +562,47 @@ Com $\alpha_{TCC}=0{,}64$ (\texttt{alfa}$=0{,}36$): sem sobressinal, $t_{63,2}\a
 VP cai $\approx$\textbf{2,6 pontos} (regulatório) e volta a $\pm1$ em $\approx$\textbf{134 s}; servo cai $3{,}3$ e leva $\approx284$ s; Dahlin ($\tau_c=40$) cai $2{,}9$ e leva $\approx190$ s. SC sobe até $\approx$\textbf{81,9\,\%} e estabiliza. O $\alpha$ \textbf{não} altera esta resposta ($VP/D$ não contém $C_f$).\end{esp}
 \textbf{Simulação para o relatório:} use o script com \texttt{--rp 133600 --rp-t <instante do $R_p$>} (Seção~\ref{pos}).
 
-\subsection{Item 3.1 --- Integral do erro mínimo (seção 7-2.3)}
-\begin{parm}$K_p=7{,}222$;\ $K_i=0{,}06449$ ($T_i=111{,}98$);\ $K_d=71{,}63$ ($T_d=9{,}92$);\ $\mu=0{,}1$.\quad Degrau de SP: \textbf{20 $\to$ 25\,\%}.\end{parm}
-\textbf{Passo a passo:} procedimento comum, com $SO_0=51{,}0\,\%$.
+\subsection{Item 3.1 --- Integral do erro mínimo (seção 7-2.3), \emph{a realizar}}
+\textbf{Ideia.} Verificar a sintonia de IAE mínimo para ponto fixo (Rovira, Tabela 7-2.3): $K_c=\frac{1{,}086}{K}r^{-0{,}869}$, $\tau_I=\frac{\tau}{0{,}740-0{,}130r}$, $\tau_D=0{,}348\tau r^{0{,}914}$, $r=t_0/\tau=0{,}3322$. Já está na forma ideal (sem conversão).
+\begin{parm}\texttt{kp := 7.222; ki := 0.06449; kd := 71.63; alfa := 1.0} ($T_i=111{,}98$ s; $T_d=9{,}92$ s).\quad Degrau de SP: \textbf{20 $\to$ 25\,\%}.\quad \textbf{Use o \texttt{Prova2\_corrigido.st}.}\end{parm}
+\textbf{Passo a passo:} procedimento comum com $SO_0=(20+0{,}262)/0{,}3963=51{,}1\,\%$ (8 min); fechar a malha com $SP=VP$; 50 s depois, $SP=25$; gravar 600 s; comparar.
 \begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/i31.png}\end{figure}
-Sobressinal $\approx$ \textbf{2,6\,\%} (FT completa; $8{,}1\,\%$ na FOPDT); $t_{63,2}\approx44$ s; acomodação $\approx110$--117 s; pico do SC 87--95\,\%; SC final $\approx63$\,\%. É \emph{mais rápida} que a Dahlin do 1.1 ($t_{63}=68$ s), com mais sobressinal.\end{esp}
-\begin{alerta}Com este ganho, degrau de 20 $\to$ 30\,\% saturaria o SC. Mantenha 20 $\to$ 25\,\%.\end{alerta}
+\textbf{Previsão (simulação ideal):} FT completa: sobressinal 2,6\,\%, $t_{63}=44$ s, acomodação 110 s, pico do SC 87\,\%, SC final 62,9 (SO final esperado $(25+0{,}26)/0{,}3963=63{,}7$). FOPDT: 8,1\,\%, 44 s, 117 s, 95\,\%. Salto do SC em $t=50$ s: $K_p\Delta SP=7{,}222\cdot5=36{,}1$ pontos. Margens: FOPDT $GM=1{,}9$, $PM=64^\circ$; completa $GM=32$, $PM=71^\circ$.\end{esp}
+\textbf{Planilha (preencher):}
+\begin{center}\small\begin{tabular}{lcc}\toprule Métrica & Ideal (FT completa) & Experimento\\\midrule sobressinal [\%] & 2,6 & \underline{\hspace{1.5cm}}\\ $t_{63,2}$ [s] & 44 & \underline{\hspace{1.5cm}}\\ acomodação ($\pm2\,\%$) [s] & 110 & \underline{\hspace{1.5cm}}\\ pico / final do SC [\%] & 87 / 62,9 & \underline{\hspace{1.5cm}}\\ salto do SC [pontos] & 36,1 & \underline{\hspace{1.5cm}}\\ RMS / máx.\ da VP [\%] & --- & \underline{\hspace{1.5cm}}\\\bottomrule\end{tabular}\end{center}
+\textbf{O que escrever:} (i) o salto de SC confirma o $K_p$ digitado; (ii) é mais rápida que o Dahlin ($t_{63}$ 44 contra 70 s), às custas de sobressinal e de um SC mais alto (87\,\%, perto do limite); (iii) FOPDT $\times$ completa: o sobressinal maior da FOPDT vem do atraso puro (menor margem de ganho); (iv) diferenças com a bancada: resposta $\sim10\,\%$ mais lenta e, com o programa original, $k_d=71{,}63$ gera pulsos de 140 pontos por LSB (Seção~\ref{licoes}).
+\begin{alerta}Com este ganho, degrau de 20 $\to$ 30\,\% saturaria o SC. Mantenha 20 $\to$ 25\,\%. A sintonia de \emph{distúrbio} (Tabela 7-2.2, $K_p=10{,}1$) aplicada ao SP daria 84\,\% de sobressinal: serve só para contraste.\end{alerta}
+\begin{real}\textbf{Q3.1 (preencher após o ensaio):} programa usado: \underline{\hspace{3cm}}; salto de SC: \underline{\hspace{1.5cm}}; sobressinal: \underline{\hspace{1.5cm}}; $t_{63}$: \underline{\hspace{1.5cm}}; RMS VP: \underline{\hspace{1.5cm}}; observações: \underline{\hspace{5cm}}\end{real}
 
-\subsection{Item 4.1 --- Ziegler--Nichols 1/4 (Tabela 7-1.1)}
-\textbf{Parte 1 --- teste de ganho final (experimental):}
+\subsection{Item 4.1 --- Ziegler--Nichols 1/4 (Tabela 7-1.1), \emph{a realizar}}
+\textbf{Ideia.} $K_{cu}$ e $T_u$ medidos na \emph{planta real}; PID real/série: $K_c'=K_{cu}/1{,}7$, $\tau_I'=T_u/2$, $\tau_D'=T_u/8$; ideal: $K_p=0{,}735K_{cu}$, $T_i=0{,}625T_u$, $T_d=0{,}1T_u$.
+\textbf{Parte 1 --- teste de ganho final:}
 \begin{enumerate}
-\item Condição inicial: $SP_0=10\,\%$ ($SO=10/0{,}3918=25{,}5\,\%$), 8 min. Escolher um ponto de operação baixo deixa folga para o SC oscilar.
-\item Controlador \textbf{só proporcional}: $K_i=0$, $K_d=0$ (ou $T_i$ muito grande e $T_d=0$). Comece com $K_c=15$.
-\item Automático. Aplique degrau de SP de $+2$ pontos. Observe a oscilação.
-\item Aumente $K_c$ em passos de $\sim$5 (depois 2, depois 1) até a VP oscilar com amplitude \textbf{constante}. Esse é o $K_{cu}$. Meça o período entre picos (=$T_u$) no gráfico (use vários picos).
-\item \textbf{Cuidado:} com $K_c$ alto o SC satura (0--100\,\%); procure o \emph{menor} $K_c$ que sustenta a oscilação sem estar saturado de forma crítica (reduza o degrau de SP se necessário).
+\item Programa: \texttt{ki := 0.0; kd := 0.0; alfa := 1.0}; \texttt{kp} variável (só proporcional). \textbf{Ponto de operação:} $SP_0=20\,\%$ ($SO_0=51{,}1\,\%$), 8 min. Neste ponto o SC pode oscilar $\pm35$ pontos \emph{sem saturar} (limites 10 e 100).
+\item Fechar a malha com $SP=VP=20$ e \texttt{kp := 15}. Aplicar $SP=21$ (degrau de \textbf{$+1$ ponto}) e observar 5 ciclos.
+\item Aumentar \texttt{kp} (15, 25, 30, 35, 37, 39, 41\ldots), esperando 3--4 períodos em cada valor.
+\item $K_{cu}$ é o \textbf{menor} \texttt{kp} com amplitude constante (variação $<5\,\%$ entre 3 picos). $T_u$ é a média dos intervalos entre picos de pelo menos 4 ciclos (resolução do ScadaBR: 1 s).
 \end{enumerate}
-\begin{esp}Esperado (FT completa): $K_{cu}\approx39$ e $T_u\approx68{,}9$ s ($\omega_u=0{,}091$ rad/s). Valores medidos tipicamente ficam 5--15\,\% diferentes (K real, ADC, atraso do scan do PLC). Com $0{,}5K_{cu}$ a oscilação amortece; com $1{,}2K_{cu}$ ela cresce.\begin{figure}[H]\centering\includegraphics[width=.9\textwidth]{figs/i41_kcu.png}\end{figure}\end{esp}
-\textbf{Parte 2 --- PID de Z--N:} recalcule com os \emph{seus} $K_{cu}$ e $T_u$:
-\[K_p=0{,}735K_{cu},\quad T_i=0{,}625T_u,\quad T_d=0{,}1T_u,\quad K_i=K_p/T_i,\quad K_d=K_pT_d .\]
-Com os valores da simulação: $K_p=28{,}65$; $T_i=43{,}03$; $T_d=6{,}885$; $K_i=0{,}6659$; $K_d=197{,}3$. Degrau de SP \textbf{10 $\to$ 12\,\%}.
+\begin{esp}Previsão (FT completa): $K_{cu}\approx39$ e $T_u\approx68{,}9$ s ($\omega_u=0{,}091$ rad/s); amplitude da VP $\approx0{,}9$ ponto por 1 ponto de degrau. Valores medidos costumam diferir 5--15\,\%. Com $0{,}5K_{cu}$ a oscilação amortece; com $1{,}2K_{cu}$ cresce.\begin{figure}[H]\centering\includegraphics[width=.9\textwidth]{figs/i41_kcu.png}\end{figure}\end{esp}
+\textbf{Parte 2 --- PID de Z--N:} recalcule com os \emph{seus} $K_{cu}$ e $T_u$. Com os valores previstos: \texttt{kp := 28.65; ki := 0.6659; kd := 197.3; alfa := 1.0}.
+\textbf{Degrau recomendado: $20\to21\,\%$.} Simulei o PID de Z--N com os limites do programa: $10\to12$ satura o SC em 10\,\% (sem limite iria a 5,5); $15\to17$ chega a 98,7\,\%; $20\to22$ satura em 100\,\%; $\mathbf{20\to21}$ \textbf{não satura} (SC entre 38,6 e 81,1).
 \begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/i41.png}\end{figure}
-Sobressinal $\approx$\textbf{62--65\,\%} do degrau (VP até $\sim13{,}3\,\%$), $t_{63,2}\approx21$ s, acomodação $\approx209$ s, razão de decaimento $\approx0{,}24$ ($\approx1/4$), SC com pico de $\sim$85\,\% e que \textbf{toca 0\,\%} no primeiro retorno (na bancada vai saturar; diferença esperada em relação à simulação linear).\end{esp}
+\textbf{Previsão (ideal, $20\to21$):} sobressinal $\approx64\,\%$ do degrau, $t_{63,2}\approx21$ s, acomodação $\approx240$ s, razão de decaimento $\approx0{,}24$ ($\approx1/4$), SC de 38,6 a 81,1 e final 53,5; salto do SC $K_p\Delta SP=28{,}7$ pontos; $GM=7{,}8$, $PM=22^\circ$.\end{esp}
+\textbf{Planilha:}
+\begin{center}\small\begin{tabular}{lcc}\toprule Medida & Previsão & Experimento\\\midrule $K_{cu}$ / $T_u$ [s] & 38,97 / 68,85 & \underline{\hspace{1.5cm}}\\ sobressinal [\%] & 64 & \underline{\hspace{1.5cm}}\\ $t_{63,2}$ / acomodação [s] & 21 / 240 & \underline{\hspace{1.5cm}}\\ razão de decaimento & 0,24 & \underline{\hspace{1.5cm}}\\ SC mín./máx./final [\%] & 38,6 / 81,1 / 53,5 & \underline{\hspace{1.5cm}}\\\bottomrule\end{tabular}\end{center}
+\textbf{O que escrever:} a razão de decaimento medida deve ficar perto de 1/4 (é o critério do método); o sobressinal alto ($\approx64\,\%$) é característico da razão 1/4 e da $PM=22^\circ$; a FOPDT não pode ser usada (instável: polos em $+0{,}027\pm0{,}087j$). \textbf{Ruído:} $k_d=197{,}3$ é o pior caso do programa original (pico de 385 pontos por LSB; simulação fiel: 82\,\% de sobressinal em vez de 62--64\,\%): \textbf{use o programa corrigido}.
+\begin{real}\textbf{Q4.1 (preencher):} $K_{cu}=$ \underline{\hspace{1.5cm}}; $T_u=$ \underline{\hspace{1.5cm}}; parâmetros digitados: \underline{\hspace{4cm}}; sobressinal: \underline{\hspace{1.5cm}}; razão de decaimento: \underline{\hspace{1.5cm}}; observações: \underline{\hspace{4cm}}\end{real}
 
-\subsection{Item 4.2 --- I\_PD com a sintonia do 4.1}
-\textbf{Ideia.} Usar os \emph{mesmos} $K_p$, $K_i$, $K_d$ do 4.1, mas com a estrutura I\_PD (só o integrador atua sobre o erro; P e D atuam sobre a VP). No OpenPLC isso é uma opção do bloco (confirme).
-\begin{parm}$K_p=28{,}65$;\ $K_i=0{,}6659$;\ $K_d=197{,}3$;\ modo \textbf{I\_PD} $=$ \textbf{\texttt{alfa := 0.0}} no programa (P e D sobre a VP; só a integral sobre o erro).\quad Degrau de SP: \textbf{10 $\to$ 12\,\%}.\end{parm}
-\textbf{Passo a passo:} procedimento comum (condição inicial $SO_0=25{,}5\,\%$); selecione I\_PD; degrau de SP 10 $\to$ 12\,\%; grave. Se houver tempo, repita com a estrutura PI\_D (item 4.1) para sobrepor.
+\subsection{Item 4.2 --- I\_PD com a sintonia do 4.1, \emph{a realizar}}
+\textbf{Ideia.} Usar os \emph{mesmos} $K_p$, $K_i$, $K_d$ do 4.1 com a estrutura I\_PD: só o integrador atua sobre o erro; P e D atuam sobre a VP. $U=\frac{K_i}{s}(R-Y)-(K_p+D)Y\Rightarrow\frac{Y}{R}=\frac{(K_i/s)G}{1+(PI+D)G}$: mesmo denominador, numerador sem o zero do PI.
+\begin{parm}\texttt{kp := 28.65; ki := 0.6659; kd := 197.3; \textbf{alfa := 0.0}} (P e D sobre a VP; só a integral sobre o erro).\quad Degrau de SP: \textbf{20 $\to$ 22\,\%} (sem salto de SC, o limite de 100\,\% não é problema).\end{parm}
+\textbf{Passo a passo:} procedimento comum ($SO_0=51{,}1\,\%$); \texttt{alfa := 0.0}; degrau $20\to22$; gravar. Se houver tempo, sobrepor com o ensaio PI\_D do 4.1.
 \begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g42.png}\end{figure}
-PI\_D: sobressinal $\approx65\,\%$, $t_{63}\approx21$ s, SC pula $\approx+57$ pontos (pico $\sim$85\,\%). I\_PD: sobressinal $\approx$\textbf{1,6\,\%}, $t_{63}\approx$\textbf{46 s} (mais lento), \textbf{sem salto no SC} (pico $\sim$43\,\%, mínimo $\sim$24\,\%).\end{esp}
-\textbf{Explicação para o relatório:} em I\_PD a FT de SP para VP é $\dfrac{K_i\,G}{1+(PI+D)G}$ (só $K_i$ no numerador): o zero do PI (que causa o sobressinal e o salto do SC) desaparece. O polinômio característico é o mesmo, então a \emph{rejeição de distúrbio} não muda, mas o seguimento de SP fica suave e mais lento. É útil quando o ganho é alto e o atuador é sensível a degraus de SP.
+\textbf{Previsão (ideal, FT completa, Z--N):} PI\_D: sobressinal 64--65\,\%, $t_{63}=21$ s, SC pula $+28{,}7$ pontos por ponto de degrau e satura em $20\to22$. I\_PD: sobressinal $\approx$\textbf{1,2\,\%}, $t_{63}\approx$\textbf{46 s}, acomodação 183 s, \textbf{sem salto no SC} (SC de 50,3 a 68,9 em $20\to22$). Com a sintonia de Dahlin: I\_PD $t_{63}=164$ s e SC sem pico, contra 70 s e pico de 88,6\,\% do PI\_D.\end{esp}
+\textbf{Planilha:}
+\begin{center}\small\begin{tabular}{lccc}\toprule Medida ($20\to22$) & PI\_D (4.1) & I\_PD previsto & I\_PD experimento\\\midrule sobressinal [\%] & 64--65 & 1,2 & \underline{\hspace{1.4cm}}\\ $t_{63,2}$ [s] & 21 & 46 & \underline{\hspace{1.4cm}}\\ salto do SC [pontos] & $K_p\Delta SP=57$ & 0 & \underline{\hspace{1.4cm}}\\ SC mín./máx.\ [\%] & 31,9 / 99,9 (satura) & 50,3 / 68,9 & \underline{\hspace{1.4cm}}\\\bottomrule\end{tabular}\end{center}
+\textbf{Explicação para o relatório (``explique o que acontece''):} (i) o I\_PD elimina o zero do PI: sem salto proporcional no SC e com muito menos sobressinal; (ii) fica mais lento ($t_{63}$ de 21 para 46 s), pois o SP não recebe ação proporcional ``antecipada''; (iii) o denominador é o mesmo: mesma estabilidade ($PM=22^\circ$, $GM=7{,}8$) e mesma rejeição de distúrbio; (iv) I\_PD é o caso $b=0$ do PID 2GL (\texttt{alfa}$=0$); PI\_D, $b=1$.
+\begin{real}\textbf{Q4.2 (preencher):} sobressinal: \underline{\hspace{1.5cm}}; $t_{63}$: \underline{\hspace{1.5cm}}; salto do SC: \underline{\hspace{1.5cm}}; observações: \underline{\hspace{5cm}}\end{real}
 
 %--------------------------------------------------------------------
 \section{Pós-processamento e comparação com a simulação}\label{pos}
@@ -639,8 +664,8 @@ SO=serie(nomes,tempo,valor,'SO'); SP=serie(nomes,tempo,valor,'SP'); VP=serie(nom
 2.1 & SP 20$\to$30, \texttt{alfa}$=0{,}36$ & sem sobress.; $t_{63}\approx104$ s; pico SC 76--81\\
 2.2 & $R_p=133{,}6$ k$\Omega$ ligado & queda 2,6 pontos; recupera em $\approx134$ s; SC final 81,9\\
 3.1 & SP 20$\to$25 & sobress.\ $\approx2{,}6\,\%$; $t_{63}\approx44$ s; SC pico 87\\
-4.1 & SP 10$\to$12 & sobress.\ 62--65\,\%; $t_{63}\approx21$ s; razão 1/4; SC toca 0\\
-4.2 & I\_PD, SP 10$\to$12 & sobress.\ $\approx1{,}6\,\%$; $t_{63}\approx46$ s; sem salto no SC\\\bottomrule\end{tabular}\end{center}
+4.1 & SP 20$\to$21 & sobress.\ $\approx64\,\%$; $t_{63}\approx21$ s; razão 1/4; SC 38,6--81,1 (sem saturar)\\
+4.2 & I\_PD, SP 20$\to$22 & sobress.\ $\approx1{,}2\,\%$; $t_{63}\approx46$ s; sem salto no SC\\\bottomrule\end{tabular}\end{center}
 
 \section{Solução de problemas}
 \begin{center}\small
