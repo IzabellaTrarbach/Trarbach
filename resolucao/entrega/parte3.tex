@@ -180,6 +180,23 @@ O filtro é o $\mu T_d=0{,}1\cdot11{,}11=1{,}11$ s do projeto, e a linha sem \te
 \textbf{(3)} Inicializar a derivada \emph{sozinha} não resolve o ruído (linha 3 da tabela): o problema é a falta de filtro.
 \textbf{Recomendação:} (a) manter o relatório do item 1.1 como PID (é o que o enunciado pede) e documentar o ruído com esta análise; (b) \textbf{registrar um ensaio com PI} (correção 1) ou com a correção 2 e confrontar VP e SC: o SC deve ficar limpo (desvio-padrão do SO em torno de 0,1--0,3 ponto, como na simulação) e $t_{63}\approx70$ s.
 
+\subsection{O programa corrigido (\texttt{Prova2\_corrigido.st}) e o que ele prevê}\label{progcorr}
+Gerei o arquivo \texttt{Prova2\_corrigido.st}, que é o \texttt{Prova2.st} com \textbf{duas alterações} (diferença completa em \texttt{Prova2\_diff.txt}, Apêndice~\ref{apcodigos}):
+\begin{enumerate}
+\item \textbf{Passa-baixa na VP antes da derivada:} \texttt{VP\_F := VP\_F + (0.02/(TAU\_F+0.02))*(VP\_PERC - VP\_F)}, com \texttt{TAU\_F = 1.11} s ($=\mu T_d$ do projeto). A derivada passa a atuar sobre \texttt{VP\_F}. Em manual, \texttt{VP\_F} acompanha a VP.
+\item \textbf{Derivada sem o \texttt{SEL(MF, 0.0, ...)}:} fica ``armada'' também em manual, o que elimina o pulso de 3 scans ao fechar a malha.
+\end{enumerate}
+Todo o resto (\texttt{kp}, \texttt{ki}, \texttt{kd}, \texttt{alfa}, \texttt{STOP\_INTGR}, \texttt{LIMIT}, VP-tracking) permanece igual. \textbf{Previsão da simulação fiel ao PLC} ($\sigma=0{,}15$ LSB; desvio-padrão do SO em $t>300$ s após o degrau) para os itens que ainda serão ensaiados:
+\begin{center}\small\resizebox{\textwidth}{!}{\begin{tabular}{l|ccc|ccc|c}\toprule & \multicolumn{3}{c|}{Programa original} & \multicolumn{3}{c|}{Programa corrigido} & Projeto\\
+Cenário & SO sd & sobress. & $t_{63}$ & SO sd & sobress. & $t_{63}$ & (sem ruído)\\\midrule
+1.1 Dahlin, 20$\to$30\,\% & 19,9 & 0,5\,\% & 77 s & \textbf{0,2} & 0,0\,\% & 70 s & 70 s\\
+2.1 2GL (\texttt{alfa=0.36}), 20$\to$30\,\% & 18,9 & 0,5\,\% & \textbf{132 s} & \textbf{0,9} & 0,0\,\% & 103 s & 104 s\\
+3.1 IAE, 20$\to$25\,\% & 21,2 & 1,1\,\% & 50 s & \textbf{0,7} & 2,7\,\% & 45 s & 44 s; 2,6\,\%\\
+4.1 Z--N, 10$\to$12\,\% & 28,6 & \textbf{82\,\%} & 23 s & \textbf{1,3} & 64\,\% & 21 s & 21 s; 62\,\%\\
+4.2 I\_PD (\texttt{alfa=0}), 10$\to$12\,\% & 23,4 & \textbf{15,8\,\%} & 54 s & \textbf{2,6} & 0,0\,\% & 46 s & 46 s; 1,6\,\%\\\bottomrule\end{tabular}}\end{center}
+\begin{res}\textbf{O programa original distorce também os ensaios que ainda faltam}: o Z--N daria 82\,\% de sobressinal em vez de 62\,\%; o I\_PD, 16\,\% em vez de $\approx2\,\%$; o 2GL ficaria em 132 s em vez de 104 s (a integral congelada pelos picos \emph{atrasa} a resposta); no Z--N e no I\_PD, com $k_d=197$, cada LSB vira pulsos de 4 vezes o tamanho (até 385 pontos). Com o programa corrigido, a simulação volta aos valores de projeto e o SO fica limpo (desvio-padrão de 0,2 a 2,6 pontos). \textbf{Recomendo usar o \texttt{Prova2\_corrigido.st} em todos os ensaios dos itens 2.1 a 4.2.}\end{res}
+\begin{todo}Carregar \texttt{Prova2\_corrigido.st} no OpenPLC (a sintaxe foi conferida por leitura, não compilada aqui: compile no editor e confirme que não há erro); repetir o item 1.1 (Dahlin, 20$\to$30\,\%) e conferir: SO sem picos (desvio-padrão $\lesssim1$ ponto), SO $\approx76\,\%$ em regime, sem pulso de 10\,\% ao fechar a malha, $t_{63}\approx70$ s. Resultado: \underline{\hspace{6cm}}\end{todo}
+
 %------------------------------------------------------------------
 \section{Item 1.2 experimental (Q12): transferência manual$\to$automático sem VP-tracking}\label{expq12}
 \subsection{Objetivo (seção 5-3.3 do livro)}
@@ -249,6 +266,7 @@ O tempo de ``desenrolar'' a integral explica o atraso.
 \item \textbf{PI?} Não é obrigatório para a estabilidade. O PI de Dahlin (\texttt{kp = 3.021}, \texttt{ki = 0.03872}, \texttt{kd = 0}) elimina o ruído (desvio-padrão do SO de 16,9 para 0,1) com $t_{63}\approx71$ s. Alternativa que mantém o PID: passa-baixa de 1,11 s na VP antes da derivada (SO com desvio-padrão 0,3).
 \item \textbf{Item 1.2:} sem VP-tracking o SC saltou $+30$ pontos (previsto $K_p(SP-VP)=29{,}2$); com tracking (Q11) não há salto.
 \item \textbf{Item 1.3:} sem anti-windup a VP fica presa em 39,3\,\% por $\approx340$ s depois da queda do SP e só chega a $20\pm1\,\%$ em 700 s; com anti-windup, em 123 s. A conta analítica dá 328 s para a saída da saturação (medido 337).
+\item \textbf{Programa corrigido:} o arquivo \texttt{Prova2\_corrigido.st} (passa-baixa de 1,11 s na VP e derivada armada em manual) elimina o ruído na simulação e evita distorções nos itens 2.1 a 4.2 (Seção~\ref{progcorr}); ainda falta testá-lo na bancada.
 \item \textbf{Tradução do 2GL:} no programa, $\mathtt{alfa}_{PLC}=1-\alpha_{TCC}$; o $\alpha_{TCC}=0{,}64$ do item 2.1 vira \texttt{alfa = 0.36}; o I\_PD do item 4.2 é \texttt{alfa = 0}.
 \end{enumerate}
-\textbf{Limitações:} (i) as versões do programa usadas em Q12 e Q13a são inferidas dos dados; (ii) o ruído do ADC é um único parâmetro ajustado ($\sigma\approx0{,}15$ LSB; faixa 0,1--0,2); (iii) a fórmula de 4 pontos do bloco \texttt{DERIVATIVE} é a da biblioteca padrão, confirmada indiretamente pelos dados e não pelo código-fonte do runtime; (iv) as correções (PI e passa-baixa) só foram testadas em simulação; (v) um ensaio de cada tipo, sem repetição.
+\textbf{Limitações:} (i) as versões do programa usadas em Q12 e Q13a são inferidas dos dados; (ii) o ruído do ADC é um único parâmetro ajustado ($\sigma\approx0{,}15$ LSB; faixa 0,1--0,2); (iii) a fórmula de 4 pontos do bloco \texttt{DERIVATIVE} é a da biblioteca padrão, confirmada indiretamente pelos dados e não pelo código-fonte do runtime; (iv) as correções (PI e passa-baixa, e o arquivo \texttt{Prova2\_corrigido.st}) só foram testadas em simulação e não foram compiladas no OpenPLC; (v) um ensaio de cada tipo, sem repetição.

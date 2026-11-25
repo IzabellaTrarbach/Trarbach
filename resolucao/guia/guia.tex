@@ -30,7 +30,7 @@
 \begin{center}
 {\LARGE\bfseries Guia de estudo e roteiro de bancada}\\[4pt]
 {\Large Segunda Avaliação de Controle de Processos --- Circuito G ($\Vc3/\Vin$)}\\[6pt]
-Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 4: inclui os resultados reais e a análise do código \texttt{Prova2.st})
+Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 5: resultados reais, análise do código \texttt{Prova2.st} e programa corrigido \texttt{Prova2\_corrigido.st})
 \end{center}
 \begin{tcolorbox}[colback=gray!6,colframe=gray!60]
 \textbf{Para que serve.} \textbf{Parte I} = estudo (glossário de siglas e termos na Seção~\ref{gloss}, fórmulas, perguntas prováveis com explicações, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{entrega} (pasta \texttt{entrega/}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
@@ -310,7 +310,7 @@ PID $\mu=1{,}0$ & $81{,}5^\circ$ & 10,9 & 0,1\,\% & 69 s & 185 s & 89,0\,\% & 7,
 \item \textbf{De onde vem o PI da Tabela 7-4.1:} a mesma dedução de Dahlin com Padé de ordem zero ($e^{-t_0s}\approx1-t_0s$) dá $C=\dfrac{\tau s+1}{K s(\tau_c+t_0)}$, isto é, $K_c=\dfrac{\tau}{K(\tau_c+t_0)}=\dfrac{78{,}03}{0{,}3918\cdot65{,}92}=3{,}02$ e $\tau_I=\tau=78{,}03$ s.
 \item \textbf{Por que a derivada faz pouca falta aqui:} $t_0/\tau=0{,}33$ (atraso pequeno) e a margem de fase já é grande; a derivada só compensa fase perto do cruzamento.
 \item \textbf{Como aplicar o PI no programa:} basta \texttt{kp := 3.021} e \texttt{kd := 0.0} (o \texttt{ki := 0.03872} é o mesmo do PID, pois $K_c/\tau_I=3{,}02/78{,}03$).
-\item \textbf{Alternativa que mantém o PID} (validada só em simulação): filtrar a VP antes da derivada, com $\tau_f=\mu T_d=1{,}11$ s. Acrescente \texttt{VP\_F : REAL; TAU\_F : REAL := 1.11;} e, antes do bloco \texttt{DERIVATIVE}:
+\item \textbf{Alternativa que mantém o PID} (validada só em simulação): filtrar a VP antes da derivada, com $\tau_f=\mu T_d=1{,}11$ s. \textbf{Já está pronta no arquivo \texttt{scripts/Prova2\_corrigido.st}} (compile no OpenPLC Editor e confirme que não há erro). As alterações são: acrescentar \texttt{VP\_F : REAL; TAU\_F : REAL := 1.11;} e, antes do bloco \texttt{DERIVATIVE}:
 \begin{lstlisting}
 IF NOT MF THEN VP_F := VP_PERC; END_IF;
 VP_F := VP_F + (0.02 / (TAU_F + 0.02)) * (VP_PERC - VP_F);
@@ -320,6 +320,16 @@ Resultado simulado: desvio-padrão do SO de 16,9 para 0,3 ponto, $t_{63}=70$ s.
 \item \textbf{Teste que confirma o diagnóstico:} repita com $K_d=0$. Se os picos sumirem, a causa é a derivada.
 \end{itemize}
 \textbf{Como responder ao professor:} ``O SO oscila porque o programa deriva a VP quantizada sem filtro (derivada de 4 pontos a 20 ms): cada degrau de 1 LSB (0,098\,\%) do ADC vira um pulso de até 76 pontos no SC, cortado pelos limites do programa (10 e 99,9\,\%); medi 295 picos e todos são múltiplos de $k_dLSB/(10T_s)=19{,}1$. A malha é estável: a VP é suave e o SO médio é o previsto. Mostrei por simulação que o PI de Dahlin dá a mesma VP com ganho de alta frequência 13 vezes menor.''
+
+\subsection{Programa corrigido: o que esperar (previsão, simulação fiel ao PLC)}
+\begin{center}\small\resizebox{\textwidth}{!}{\begin{tabular}{l|ccc|ccc|c}\toprule & \multicolumn{3}{c|}{Programa original} & \multicolumn{3}{c|}{\texttt{Prova2\_corrigido.st}} & Projeto\\
+Cenário & SO sd & sobress. & $t_{63}$ & SO sd & sobress. & $t_{63}$ & (sem ruído)\\\midrule
+1.1 Dahlin, 20$\to$30\,\% & 19,9 & 0,5\,\% & 77 s & \textbf{0,2} & 0,0\,\% & 70 s & 70 s\\
+2.1 2GL (\texttt{alfa=0.36}), 20$\to$30\,\% & 18,9 & 0,5\,\% & \textbf{132 s} & \textbf{0,9} & 0,0\,\% & 103 s & 104 s\\
+3.1 IAE, 20$\to$25\,\% & 21,2 & 1,1\,\% & 50 s & \textbf{0,7} & 2,7\,\% & 45 s & 44 s; 2,6\,\%\\
+4.1 Z--N, 10$\to$12\,\% & 28,6 & \textbf{82\,\%} & 23 s & \textbf{1,3} & 64\,\% & 21 s & 21 s; 62\,\%\\
+4.2 I\_PD (\texttt{alfa=0}), 10$\to$12\,\% & 23,4 & \textbf{15,8\,\%} & 54 s & \textbf{2,6} & 0,0\,\% & 46 s & 46 s; 1,6\,\%\\\bottomrule\end{tabular}}\end{center}
+\textbf{Mensagem:} o programa original não só deixa o SO ruidoso: ele \emph{distorce o resultado} dos ensaios (Z--N com 82\,\% de sobressinal em vez de 62\,\%; I\_PD com 16\,\% em vez de $\approx2\,\%$; 2GL com $t_{63}$ de 132 s em vez de 104 s, porque os picos congelam a integral). \textbf{Use o \texttt{Prova2\_corrigido.st} nos itens 2.1, 2.2, 3.1, 4.1 e 4.2.} Os itens 1.1 a 1.3 já foram feitos com o original; se quiser, repita o 1.1 com o corrigido e confira: SO sem picos (desvio-padrão $\lesssim1$), $t_{63}\approx70$ s e nenhum pulso de 10\,\% ao fechar a malha. \textbf{Limite:} previsão por simulação; o arquivo não foi compilado nem testado na bancada.
 
 \subsection{Perguntas novas, com respostas explicadas}
 \begin{enumerate}[leftmargin=*]
@@ -420,7 +430,7 @@ GND & terra do circuito (lado de $R_4$ e dos $C$) & ---\\\bottomrule\end{tabular
 \section{Etapa B --- Software}
 \textbf{OpenPLC (programa):}
 \begin{enumerate}
-\item O programa usado é o \texttt{Prova2.st} (\texttt{PROGRAM PI\_D}, tarefa de 20 ms). Variáveis que você mexe: \texttt{kp}, \texttt{ki}, \texttt{kd} (constantes no início), \texttt{alfa} (2GL), \texttt{MF} (\%QX0.0: $1=$ automático, $0=$ manual) e, pelo ScadaBR, \texttt{SP} (\%QW0) e \texttt{SO} (\%QW1, manual). \texttt{VP} é \%IW0. \textbf{Não existem} $T_i$, $T_d$ nem $\mu$: digite $K_i=K_p/T_i$ e $K_d=K_pT_d$.
+\item O programa usado nos ensaios 1.1 a 1.3 foi o \texttt{Prova2.st} (\texttt{PROGRAM PI\_D}, tarefa de 20 ms); para os próximos itens use o \texttt{Prova2\_corrigido.st} (mesmas variáveis). Variáveis que você mexe: \texttt{kp}, \texttt{ki}, \texttt{kd} (constantes no início), \texttt{alfa} (2GL), \texttt{MF} (\%QX0.0: $1=$ automático, $0=$ manual) e, pelo ScadaBR, \texttt{SP} (\%QW0) e \texttt{SO} (\%QW1, manual). \texttt{VP} é \%IW0. \textbf{Não existem} $T_i$, $T_d$ nem $\mu$: digite $K_i=K_p/T_i$ e $K_d=K_pT_d$.
 \item Escalas: \textbf{tudo em \%} (UINT $\times\,0{,}001525$). ADC de 10 bits $\Rightarrow$ 1 LSB $=0{,}0976\,\%$. O SC é limitado a $[10;100]\,\%$ (no ScadaBR o 100\,\% aparece como 99,94).
 \item Em manual o SP é \textbf{sobrescrito pela VP} (VP-tracking); você só consegue fixar o SP em automático. Em manual o SO é o valor que você digita no ScadaBR.
 \item \textbf{Como alterar o programa para cada item} (Seção~\ref{editarst}).
@@ -444,7 +454,7 @@ GND & terra do circuito (lado de $R_4$ e dos $C$) & ---\\\bottomrule\end{tabular
 Todos os itens seguem a mesma sequência:
 \begin{enumerate}
 \item \textbf{Condição inicial (manual):} $SO=SP_0/K$ ($K=0{,}3918$ medido) por $\ge8$ min até $\Vc3$ estabilizar em $SP_0$.
-\item Digite os parâmetros do item (Seção~\ref{tabpar}). \textbf{Releia-os na tela} (um dígito errado é o erro mais comum).
+\item \textbf{Carregue o programa certo:} \texttt{Prova2\_corrigido.st} para 2.1 a 4.2 (sem ruído no SO); \texttt{Prova2.st} original só se for reproduzir 1.1 a 1.3 como foram feitos. Digite os parâmetros do item (Seção~\ref{tabpar}). \textbf{Releia-os na tela} (um dígito errado é o erro mais comum).
 \item Ajuste $SP=VP$ (valor atual) \textbf{antes} de passar para automático (isto é o VP-tracking manual). Grave o ScadaBR (inicie o registro $\sim$30 s antes).
 \item Passe para \textbf{automático}. Confirme que o SC \textbf{não deu salto} (sistema bumpless).
 \item Aguarde $\sim$50 s e aplique o \textbf{degrau de SP} do item (anote o horário).
@@ -466,7 +476,7 @@ O OpenPLC Editor mostra o programa em blocos; o arquivo \texttt{.st} exportado �
 3.1 & \texttt{kp := 7.222; ki := 0.06449; kd := 71.63; alfa := 1.0}.\\
 4.1 (ganho final) & \texttt{ki := 0.0; kd := 0.0;} e variar \texttt{kp}. Depois: \texttt{kp := 0.735*Kcu; ki := kp/(0.625*Tu); kd := kp*0.1*Tu}.\\
 4.2 (I\_PD) & Parâmetros do 4.1 com \texttt{alfa := 0.0} (P e D sobre a VP; só a integral sobre o erro).\\
-Correção do ruído & PI: \texttt{kp := 3.021; kd := 0.0;} (\texttt{ki} igual). Ou PID com passa-baixa na VP (Seção~\ref{licoes}).\\\bottomrule
+\textbf{Correção do ruído} & \textbf{Carregue \texttt{scripts/Prova2\_corrigido.st}} (passa-baixa de 1,11 s na VP e derivada armada em manual): recomendado para 2.1 a 4.2. Alternativa mínima: PI, \texttt{kp := 3.021; kd := 0.0;} (\texttt{ki} igual).\\\bottomrule
 \end{longtable}\end{center}
 \begin{alerta}Para o OpenPLC, o 100\,\% do SC volta ao ScadaBR como 99,94\,\% e o limite inferior do SC é 10\,\% (programa). Em manual, o SO que você digita pode ser $<10\,\%$, mas em automático o SC nunca fica abaixo de 10\,\%.\end{alerta}
 

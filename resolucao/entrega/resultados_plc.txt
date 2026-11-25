@@ -16,3 +16,14 @@
 == 4) Q13a (sem STOP_INTGR) e Q13b (com STOP_INTGR)
    Q13a: SO medio no patamar exp 99.9 sim 100.0 | VPmax exp 39.33 sim 39.38 | SO sai da saturacao exp 337 s sim 325 s | VP em 20+-1: exp 700 s sim 681 s | VP RMS 0.44
    Q13b: SO medio no patamar exp 96.6 sim 96.5 | VPmax exp 38.16 sim 38.35 | SO sai da saturacao exp 0 s sim 0 s | VP em 20+-1: exp 123 s sim 101 s | VP RMS 0.63
+== 5) Previsao com o programa corrigido (derivada filtrada tau=1,11 s + derivada armada em manual), sigma=0.15 LSB
+   1.1 Dahlin 20->30                  original  SO sd  19.9 | picos 0.26 | sobress.   0.5% | t63  77 s | SO max 100 | SO medio(regime) 75.0 | min antes do degrau 10.0
+   1.1 Dahlin 20->30                  corrigido SO sd   0.2 | picos 0.00 | sobress.   0.0% | t63  70 s | SO max 90 | SO medio(regime) 76.1 | min antes do degrau 50.8
+   2.1 2GL alfa=0.36 20->30           original  SO sd  18.9 | picos 0.24 | sobress.   0.5% | t63 132 s | SO max 100 | SO medio(regime) 78.0 | min antes do degrau 10.0
+   2.1 2GL alfa=0.36 20->30           corrigido SO sd   0.9 | picos 0.00 | sobress.   0.0% | t63 103 s | SO max 81 | SO medio(regime) 76.1 | min antes do degrau 50.7
+   3.1 IAE 20->25                     original  SO sd  21.2 | picos 0.24 | sobress.   1.1% | t63  50 s | SO max 100 | SO medio(regime) 66.2 | min antes do degrau 10.0
+   3.1 IAE 20->25                     corrigido SO sd   0.7 | picos 0.00 | sobress.   2.7% | t63  45 s | SO max 89 | SO medio(regime) 63.5 | min antes do degrau 50.5
+   4.1 Z-N 10->12                     original  SO sd  28.6 | picos 0.22 | sobress.  82.0% | t63  23 s | SO max 100 | SO medio(regime) 29.3 | min antes do degrau 10.0
+   4.1 Z-N 10->12                     corrigido SO sd   1.3 | picos 0.01 | sobress.  64.2% | t63  21 s | SO max 92 | SO medio(regime) 30.9 | min antes do degrau 14.6
+   4.2 I_PD (alfa=0) 10->12           original  SO sd  23.4 | picos 0.17 | sobress.  15.8% | t63  54 s | SO max 100 | SO medio(regime) 27.1 | min antes do degrau 10.0
+   4.2 I_PD (alfa=0) 10->12           corrigido SO sd   2.6 | picos 0.03 | sobress.   0.0% | t63  46 s | SO max 50 | SO medio(regime) 30.8 | min antes do degrau 14.6

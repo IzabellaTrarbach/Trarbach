@@ -7,6 +7,7 @@ Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \tex
 \texttt{simexp.py} & Simulador de malha fechada (planta de 3ª ordem completa, PI\_D, saturação, anti-windup, offset)\\
 \texttt{analise\_experimentos.py} & Análise dos ensaios Q11, Q12, Q13a e Q13b: métricas, estatística do ruído, PI $\times$ PID e figuras\\
 \texttt{simula\_bancada.py} & Ferramenta de linha de comando para comparar \emph{qualquer} ensaio (RMS de VP e SC), com opções de $\alpha$, I\_PD, saturação, anti-windup e $R_p$\\
+\texttt{Prova2\_corrigido.st} & Programa corrigido (passa-baixa na VP, derivada armada em manual); diferença em \texttt{Prova2\_diff.txt}\\
 \texttt{plc\_sim.py} & Simulador \emph{fiel ao programa do PLC} (scan de 20 ms, ADC de 10 bits com ruído, derivada de 4 pontos, \texttt{STOP\_INTGR}, \texttt{FF2GL})\\
 \texttt{analise\_plc.py} & Análise do ruído (histograma dos picos), comparação fiel ao PLC e correções (PI, passa-baixa)\\
 \texttt{Prova2.st} & Programa do OpenPLC usado na bancada (recebido do aluno)\\
@@ -19,6 +20,8 @@ Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \tex
 \lstinputlisting[language=Python]{codigos/analise_experimentos.py}
 \subsection{\texttt{Prova2.st}: programa do OpenPLC}
 \lstinputlisting[language={}]{codigos/Prova2.st}
+\subsection{\texttt{Prova2\_corrigido.st}: diferença em relação ao original}
+\lstinputlisting[language={}]{codigos/Prova2_diff.txt}
 \subsection{\texttt{plc\_sim.py}: simulador fiel ao PLC}
 \lstinputlisting[language=Python]{codigos/plc_sim.py}
 \subsection{\texttt{analise\_plc.py}: análise fiel ao PLC}

@@ -70,3 +70,22 @@ for j, (n, st, stop) in enumerate((('Q13a', 820, False), ('Q13b', 38, True))):
     ax[1, j].plot(tt2, SO[r], color='#9ecae1', lw=.6, label='SO exp.'); ax[1, j].plot(tt2, S[r - st], color='#fb6a4a', lw=.6, alpha=.8, label='SO sim.'); ax[1, j].legend(fontsize=7); ax[1, j].set_xlabel('t - t_queda do SP [s]')
 plt.tight_layout(); plt.savefig('figs_exp/plc_q13.png'); plt.close()
 open('resultados_plc.txt', 'w').write(LOG.getvalue())
+
+# ------------------------------------------------ 5) previsao: programa ORIGINAL x CORRIGIDO (Prova2_corrigido.st)
+pr("== 5) Previsao com o programa corrigido (derivada filtrada tau=1,11 s + derivada armada em manual), sigma=%.2f LSB" % SIG)
+K3 = 0.397146
+def cenario(nome, kp, ki, kd, alfa, sp0, sp1, tend=700, tstep=50):
+    sp = np.where(np.arange(tend) < tstep, sp0, sp1).astype(float); so0 = (sp0 + 0.262) / 0.3963
+    out = []
+    for lab, kw in (('original', {}), ('corrigido', dict(vpf_tau=1.11, d_init_auto=True))):
+        t, sc, vpa, vpr = plc(sp, so0, sp0, kp=kp, ki=ki, kd=kd, alfa=alfa, sigma_lsb=SIG, **kw); ix = (np.arange(tend) / TS).astype(int); S = sc[ix]; V = vpr[ix]
+        base = mediana_movel(S, 15); dd = sp1 - sp0; yn = (V - sp0) / dd; t63 = next((i for i in range(tstep, tend) if yn[i] >= .632), tend) - tstep
+        out.append((lab, S[tstep + 250:].std(), np.mean(np.abs(S[tstep + 250:] - base[tstep + 250:]) > 8), max(0, (V.max() - sp1) / dd * 100), t63, S.max(), S[tstep + 250:].mean(), S[:tstep].min()))
+    for lab, sd, fp, os_, t63, pk, mean, mn in out:
+        pr("   %-34s %-9s SO sd %5.1f | picos %.2f | sobress. %5.1f%% | t63 %3d s | SO max %.0f | SO medio(regime) %.1f | min antes do degrau %.1f" % (nome, lab, sd, fp, os_, t63, pk, mean, mn))
+cenario("1.1 Dahlin 20->30", 3.523, 0.03872, 39.16, 1.0, 20.0, 30.0)
+cenario("2.1 2GL alfa=0.36 20->30", 5.057, 0.05558, 56.21, 0.36, 20.0, 30.0, tend=800)
+cenario("3.1 IAE 20->25", 7.222, 0.06449, 71.63, 1.0, 20.0, 25.0)
+cenario("4.1 Z-N 10->12", 28.654, 0.6659, 197.3, 1.0, 10.0, 12.0, tend=500)
+cenario("4.2 I_PD (alfa=0) 10->12", 28.654, 0.6659, 197.3, 0.0, 10.0, 12.0, tend=500)
+open('resultados_plc.txt', 'w').write(LOG.getvalue())
