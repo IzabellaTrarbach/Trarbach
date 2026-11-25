@@ -310,10 +310,10 @@ PID $\mu=1{,}0$ & $81{,}5^\circ$ & 10,9 & 0,1\,\% & 69 s & 185 s & 89,0\,\% & 7,
 \item \textbf{De onde vem o PI da Tabela 7-4.1:} a mesma dedução de Dahlin com Padé de ordem zero ($e^{-t_0s}\approx1-t_0s$) dá $C=\dfrac{\tau s+1}{K s(\tau_c+t_0)}$, isto é, $K_c=\dfrac{\tau}{K(\tau_c+t_0)}=\dfrac{78{,}03}{0{,}3918\cdot65{,}92}=3{,}02$ e $\tau_I=\tau=78{,}03$ s.
 \item \textbf{Por que a derivada faz pouca falta aqui:} $t_0/\tau=0{,}33$ (atraso pequeno) e a margem de fase já é grande; a derivada só compensa fase perto do cruzamento.
 \item \textbf{Como aplicar o PI no programa:} basta \texttt{kp := 3.021} e \texttt{kd := 0.0} (o \texttt{ki := 0.03872} é o mesmo do PID, pois $K_c/\tau_I=3{,}02/78{,}03$).
-\item \textbf{Alternativa que mantém o PID} (validada só em simulação): filtrar a VP antes da derivada, com $\tau_f=\mu T_d=1{,}11$ s. \textbf{Já está pronta no arquivo \texttt{scripts/Prova2\_corrigido.st}} (compile no OpenPLC Editor e confirme que não há erro). As alterações são: acrescentar \texttt{VP\_F : REAL; TAU\_F : REAL := 1.11;} e, antes do bloco \texttt{DERIVATIVE}:
+\item \textbf{Alternativa que mantém o PID} (validada só em simulação): filtrar a VP antes da derivada, com $\tau_f=\mu T_d=1{,}11$ s. \textbf{Já está pronta como projeto do OpenPLC Editor} (pasta \texttt{entrega/plc\_corrigido/PI\_DtwoGL\_prll\_uno\_beta\_corrigido}, em diagrama de blocos) \textbf{e como texto} (\texttt{scripts/Prova2\_corrigido.st}); abra o projeto no editor, faça o \emph{Build} e confirme que não há erro. As alterações são: acrescentar \texttt{VP\_F : REAL := 0.0; kf\_VP : REAL := 0.017699;} ($=0{,}02/(1{,}11+0{,}02)$) e, antes do bloco \texttt{DERIVATIVE}:
 \begin{lstlisting}
 IF NOT MF THEN VP_F := VP_PERC; END_IF;
-VP_F := VP_F + (0.02 / (TAU_F + 0.02)) * (VP_PERC - VP_F);
+VP_F := VP_F + kf_VP * (VP_PERC - VP_F);
 Kd_VP_PERC := -1.0 * kd * VP_F * M_ACAO;   (* sem o SEL(MF, 0.0, ...) *)
 \end{lstlisting}
 Resultado simulado: desvio-padrão do SO de 16,9 para 0,3 ponto, $t_{63}=70$ s.

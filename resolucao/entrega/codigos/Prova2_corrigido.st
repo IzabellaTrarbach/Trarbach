@@ -1,4 +1,4 @@
-(* Prova2_corrigido.st: Prova2.st com derivada filtrada. Unicas alteracoes: variaveis VP_F e TAU_F e o bloco
+(* Prova2_corrigido.st: Prova2.st com derivada filtrada. Unicas alteracoes: variaveis VP_F e kf_VP e o bloco
    marcado CORRECAO 1/2 antes do bloco DERIVATIVE. Validado so em simulacao (plc_sim.py), nao na bancada. *)
 PROGRAM PI_D
   VAR
@@ -39,7 +39,7 @@ PROGRAM PI_D
     alfa : REAL := 1.0;
     FF2GL : REAL := 0.0;
     VP_F : REAL := 0.0;
-    TAU_F : REAL := 1.11;
+    kf_VP : REAL := 0.017699;
     MMRY : UINT := 0;
     _TMP_SUB89_OUT : REAL;
     _TMP_MUL90_OUT : REAL;
@@ -102,12 +102,12 @@ PROGRAM PI_D
   INTEGRAL_SEM_CI(RUN := TRUE, R1 := NOT(MF), XIN := _TMP_SEL41_OUT, X0 := 0.0, CYCLE := T#500ms);
   _TMP_MUL24_OUT := MUL(INTEGRAL_SEM_CI.XOUT, 0.04);
   Ki_intgrERRO_PERC := _TMP_MUL24_OUT;
-  (* CORRECAO 1: passa-baixa de 1a ordem na VP antes da derivada (tau = TAU_F = mu*Td = 1.11 s; Ts = 20 ms).
+  (* CORRECAO 1: passa-baixa de 1a ordem na VP antes da derivada (kf_VP = Ts/(tauf+Ts) = 0.02/(1.11+0.02); tauf = mu*Td = 1.11 s; Ts = 20 ms).
      Em manual VP_F acompanha a VP. *)
   IF NOT MF THEN
     VP_F := VP_PERC;
   ELSE
-    VP_F := VP_F + (0.02 / (TAU_F + 0.02)) * (VP_PERC - VP_F);
+    VP_F := VP_F + kf_VP * (VP_PERC - VP_F);
   END_IF;
   (* CORRECAO 2: sem SEL(MF, 0.0, ...): a derivada fica 'armada' tambem em manual,
      eliminando o pulso de 3 scans ao fechar a malha. *)
