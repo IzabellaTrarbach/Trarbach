@@ -1,6 +1,6 @@
-%==================== PARTE 3: RESULTADOS EXPERIMENTAIS (QUESTÃO 1) ====================
+%==================== PARTE A: QUESTÃO 1, SIMULAÇÃO IDEAL ====================
 \section{Resultados experimentais da Questão 1: dados e método de análise}\label{expdados}
-Nesta parte confronto os ensaios feitos na bancada (OpenPLC + Arduino + ScadaBR) com a simulação teórica das seções anteriores. Foram realizados quatro registros:
+Nesta parte confronto os ensaios feitos na bancada (OpenPLC + Arduino + ScadaBR) com a \textbf{simulação ideal} (planta completa, controlador ideal com filtro derivativo de projeto, \emph{sem ruído de ADC}), tal como nas seções anteriores. A análise do ruído do sinal de controle, do programa do PLC e a simulação fiel ao PLC (com ruído) ficam na Parte B (a partir da Seção~\ref{secst}); os itens 3.1, 4.1 e 4.2, a realizar, na Parte C (Seção~\ref{q34}). Foram realizados quatro registros:
 \begin{center}\small
 \begin{tabular}{llp{8.2cm}}\toprule Arquivo & Item & O que foi feito\\\midrule
 \texttt{Q11.csv} & 1.1 & Malha fechada com a sintonia de Dahlin; degrau de SP $19{,}5\to30\,\%$\\
@@ -14,11 +14,12 @@ O ScadaBR grava um arquivo CSV em formato ``longo'': cada linha traz o \emph{nom
 
 \subsection{Premissas}
 \begin{enumerate}
-\item \textbf{Sintonia usada nos quatro ensaios:} a de Dahlin do item 1.1 ($K_p=3{,}523$; $T_i=90{,}99$ s; $T_d=11{,}11$ s; $\mu=0{,}1$). Os números dos parâmetros digitados não estão nos arquivos; a evidência de que são esses vem do próprio dado: no degrau de SP da Q11, o SO saltou de $49{,}5$ para $86{,}5$\,\% (+$37{,}0$ pontos) para um degrau de SP de $10{,}48$ pontos, o que dá $K_p=37{,}0/10{,}48=3{,}53$, igual ao previsto $3{,}523$. \textbf{Confirme}, na sua anotação do ensaio, se os valores digitados foram esses.
-\item \textbf{Limites do SC:} em todos os quatro arquivos o SO nunca saiu da faixa $[9{,}99;\,99{,}94]\,\%$ (o mínimo $9{,}99485$ e o máximo $99{,}940875=100\cdot1023/1024$ se repetem em todos). Ou seja, o sinal de controle está limitado, na prática, a \textbf{$\approx10\,\%$ (e não 0\,\%) até $\approx99{,}94\,\%$}. Nas simulações aplico esses mesmos limites.
-\item \textbf{Modelo da planta:} FT completa das seções 2 e 3 (com os $R$ e $C$ medidos), mais um deslocamento (\emph{offset}) de saída obtido do ajuste da Seção~\ref{expplanta}.
+\item \textbf{Sintonia usada:} a de Dahlin do item 1.1. Agora ela está confirmada no próprio programa (\texttt{kp = 3.523}, \texttt{ki = 0.03872}, \texttt{kd = 39.16}) e, nos dados, pelo salto do SO no degrau de SP da Q11: $+37{,}0$ pontos para $\Delta SP=10{,}48$ $\Rightarrow K_p=3{,}53$.
+\item \textbf{Versões do programa por ensaio:} o arquivo \texttt{Prova2.st} que recebi tem VP-tracking e anti-windup (\texttt{STOP\_INTGR}) ligados e \texttt{alfa = 1}. Entendo que: Q11 e Q13b usaram esse programa; Q12 usou uma versão \emph{sem} a linha de VP-tracking (o SP ficou em 0 em manual, ao contrário da Q11, em que o SP seguiu a VP); Q13a usou uma versão com \texttt{STOP\_INTGR} desativado. \textbf{Confirme.}
+\item \textbf{Limites do SC:} $[10;\,100]\,\%$ no programa (\texttt{LIMIT(10.0, ., 100.0)}). Os $100\,\%$ viram $65535$ no UINT e voltam a $65535\cdot0{,}001525=99{,}94\,\%$ no ScadaBR, daí o máximo $99{,}940875$ que aparece em todos os arquivos. O mínimo $9{,}99485$ é o limite de 10\,\%. Ou seja, \textbf{o SO não vai de 0 a 99, e sim de $\approx$10 a $\approx$99,94\,\%}, por projeto do programa.
+\item \textbf{Modelo da planta:} FT completa (seções 2 e 3) com os $R$ e $C$ medidos, mais um offset de saída obtido do ajuste da Seção~\ref{expplanta}.
 \end{enumerate}
-\subsection{O simulador de comparação}
+\subsection{O simulador ideal de comparação}
 Simulo a malha fechada em tempo discreto (passo 0,05 s) com a planta de 3ª ordem completa:
 \[
 x[k+1]=\Phi\,x[k]+\Gamma\,u[k],\quad \Phi=e^{A\,\Delta t},\ \Gamma=A^{-1}(\Phi-I)B,\qquad VP=x_3+\text{offset},
@@ -48,7 +49,7 @@ Q11 (t=1160--2191) & 0,50 & 1,56\\ Q12 (t=20--1075) & 0,20 & 0,65\\ Q13a (t=20--
 No degrau manual $10{,}37\to50\,\%$ da Q11, o modelo reproduz VP, VP1 e VP2 com RMS de 0,28; 0,56 e 0,66\,\%. \textbf{O modelo físico está validado}: qualquer diferença entre simulação e experimento nas seções seguintes vem do controlador/implementação (ruído, limites, anti-windup), não da planta.
 
 %------------------------------------------------------------------
-\section{Item 1.1 experimental (Q11): Dahlin com $\tau_c=40$ s}
+\section{Item 1.1 experimental (Q11): Dahlin com $\tau_c=40$ s}\label{expq11}
 \subsection{O que foi feito (linha do tempo extraída do arquivo)}
 \begin{enumerate}
 \item Manual com $SO=65{,}9\to10{,}4\to50{,}0\,\%$ (a malha fica em aberto; o SP \emph{acompanha a VP} enquanto está em manual, isto é, o bloco tem VP-tracking). Com $SO=50\,\%$ a VP estabiliza em $19{,}4\,\%$.
@@ -79,81 +80,11 @@ Erro SC (mediana 21 s): RMS & \multicolumn{2}{c}{3,1\,\%}\\\bottomrule\end{tabul
 \item \textbf{A resposta experimental é um pouco mais lenta:} $t_{63,2}=79$ s contra 70 s (+13\,\%) e a cauda é mais lenta ($t_{98}=260$ s contra 174 s). As causas prováveis, em ordem: (i) as constantes de tempo reais do circuito são $\approx4$--6\,\% maiores que as calculadas (já constatado na identificação da 1ª parte, Seção 5.3); (ii) a rápida alternância do SO entre os limites (Seção~\ref{expruido}) \emph{retifica} o sinal: o SC médio aplicado ($75{,}4$) fica abaixo da mediana ($78{,}7$), o que atrasa o fechamento do último pedaço do degrau; (iii) tolerâncias dos $R$ e $C$.
 \item \textbf{O SC concorda no valor médio e no formato:} salto inicial de $\approx37$ pontos, pico da mediana em $\approx91\,\%$ (simulado $88\,\%$) e queda até $\approx78$--79\,\% (simulado $76$). A diferença de $\sim3$ pontos entre mediana e simulação aparece porque o SO bruto é muito ruidoso; o que importa para a planta é a \emph{média}, e a média experimental ($75{,}4$) fica a $0{,}8$ ponto da simulada ($76{,}2$).
 \end{itemize}
+\begin{just}\textbf{Onde estão as diferenças residuais.} A resposta experimental ser $\approx13\,\%$ mais lenta e o SO bruto ser ruidoso não são falhas da sintonia: vêm do programa do PLC (derivada sem filtro sobre o ADC). A explicação e a simulação fiel ao PLC, que reproduz a VP com RMS de 0,11\,\%, estão na Parte B (Seções~\ref{secst}, \ref{expruido} e \ref{simplc}).\end{just}
 \begin{res}Item 1.1 verificado: a sintonia de Dahlin ($\tau_c=40$ s) leva a VP de $19{,}5$ a $30\,\%$ sem sobressinal significativo e sem erro em regime; VP experimental e simulada diferem por RMS de 0,38\,\% (3,6\,\% do degrau). O SC experimental tem o salto de $K_p\Delta SP$ previsto, mas é ruidoso (próxima seção).\end{res}
 
 %------------------------------------------------------------------
-\section{Por que o SO oscila entre $\approx$10\,\% e $\approx$99,9\,\% depois de fechar a malha? É preciso trocar para PI?}\label{expruido}
-Esta é a observação mais importante dos ensaios: com a malha fechada, o gráfico do \texttt{SO} fica ``serrilhado'', com valores que pulam entre o limite inferior ($\approx10\,\%$) e o superior ($\approx99{,}9\,\%$), embora a VP seja suave. Vou mostrar, com os dados, \textbf{que isso não é instabilidade da malha}, qual é a causa, e o que fazer.
-
-\subsection{Primeiro: não é instabilidade do laço}
-\begin{itemize}
-\item A \textbf{VP é suave}: em regime, o desvio-padrão da VP é de 0,13 ponto (Q11, $t>1900$ s), da ordem de 1 LSB do ADC ($0{,}0976\,\%$). Uma malha instável teria VP oscilando com amplitude crescente (como no ganho final do Z--N).
-\item A \textbf{mediana} do SO é estável: desvio-padrão da mediana móvel $=1{,}2$ pontos (Q11), contra 17,5 do SO bruto.
-\item O \textbf{valor médio} do SO está de acordo com a teoria: $(SP-\text{offset})/K=(30+0{,}26)/0{,}3971=76{,}2\,\%$ contra 75,4 medido.
-\item Em Q11, 89,6\,\% das amostras do SO em malha fechada estão \emph{entre} os limites, só $2{,}4\,\%$ em 10\,\% e $8{,}0\,\%$ em 99,9\,\%: o SO fica no valor correto quase o tempo todo e dá \emph{picos isolados} ($\approx20\,\%$ das amostras).
-\item Os picos já estão presentes com a \emph{malha recém-fechada e $SP=VP$} (Q11, t=1606--1650), quando o erro é praticamente zero e não há nada para ``instabilizar'' (veja a sequência do SO: \texttt{50, 50, 50, 10, 99,9, 50, 50, \ldots}).
-\end{itemize}
-\textbf{Conclusão parcial:} é um problema de \emph{ruído no sinal de controle}, e não de estabilidade.
-
-\subsection{Segundo: a causa é a derivada atuando sobre a VP quantizada}
-O ADC de 10 bits tem resolução de $100/1024=0{,}0976\,\%$ por degrau (LSB). A VP física varia lentamente (menos de $0{,}1\,\%$ por segundo em regime), então o valor lido é uma \textbf{escada}: fica constante por vários segundos e muda de 1 LSB de uma vez. Matematicamente, a derivada de uma escada é uma \emph{sequência de impulsos}. O termo derivativo é
-\[
-D(s)=\frac{K_d\,s}{\mu T_d\,s+1}\ \ \Rightarrow\ \ \text{resposta a um degrau de }\Delta V:\ \ u_D(t)=-\frac{K_d\,\Delta V}{\mu T_d}\,e^{-t/(\mu T_d)} .
-\]
-O sinal é negativo porque, no PI\_D, a derivada atua com sinal oposto sobre a VP. O \textbf{pico previsto por 1 LSB}, com o filtro funcionando como projetado ($\mu T_d=0{,}1\cdot11{,}11=1{,}11$ s), seria
-\[
-\frac{K_d\Delta V}{\mu T_d}=\frac{39{,}15\cdot0{,}0976}{1{,}11}=3{,}4\ \text{pontos},
-\]
-decaindo com constante de 1,11 s: um pequeno ``tremor'' de $\pm3$ pontos no SO. O ganho em alta frequência é $K_p(1+1/\mu)=38{,}8$: cada LSB vale $38{,}8\cdot0{,}0976=3{,}8$ pontos no máximo.
-
-\textbf{O que os dados mostram é muito maior.} Nos registros com malha fechada:
-\begin{center}\small
-\resizebox{\textwidth}{!}{\begin{tabular}{lcccc}\toprule Registro & picos (|SO $-$ mediana|$>8$) & VP mudou 1 LSB & $P(\text{pico}\mid\text{LSB})$ & $P(\text{pico}\mid\text{sem LSB})$\\\midrule
-Q11 ($t=1900$--2191) & 20\,\% das amostras & 14\,\% & 0,52 & 0,06\\
-Q13a ($t=100$--560) & 46\,\% & 29\,\% & 0,64 & 0,27\\
-Q12 ($t=620$--1075) & 42\,\% & 36\,\% & 0,56 & 0,22\\\bottomrule\end{tabular}}\end{center}
-Na Q11 a probabilidade de haver um pico quando a VP muda de 1 LSB (na janela de $\pm1$ s) é $0{,}52$, \textbf{contra $0{,}06$ quando a VP não muda: um fator de 8,7}. Além disso, o \emph{sinal} é o da derivada sobre a VP: quando a VP sobe 1 LSB, o SO cai em média $26{,}1$ pontos; quando desce 1 LSB, o SO sobe em média $12{,}7$ (Figura~\ref{figruido}).
-\begin{figure}[H]\centering\includegraphics[width=.8\textwidth]{figs_exp/q11_ruido.png}\caption{Q11 em regime, malha fechada. Acima: a VP como escada de 1 LSB. Abaixo: o SO, com um pico a cada transição da VP.}\label{figruido}\end{figure}
-\textbf{O tamanho do pico está inconsistente com o filtro de $\mu T_d=1{,}11$ s.} O pico típico medido (amostras não saturadas) tem mediana de 21 pontos, e muitos chegam a saturar (de $\sim79$ para 10 ou 99,9, isto é, $\gtrsim60$ pontos), contra os 3,4 pontos previstos. Como o ScadaBR só amostra o SO a cada 1 s (e um pico decai em fração de segundo), o pico real é ainda maior que o observado. Inverso: se o pico de 1 LSB é $K_d\Delta V/T_{ef}\gtrsim26$ pontos, então $T_{ef}\lesssim39{,}15\cdot0{,}0976/26=0{,}15$ s, muito menor que 1,11 s. Para comparação, uma derivada por \emph{diferença finita sem filtro}, com ciclo de execução (\emph{scan}) de 0,1 s, daria $K_d\Delta V/T_s=39{,}15\cdot0{,}0976/0{,}1=38$ pontos --- da ordem do observado.
-\begin{alerta}Isto é uma \textbf{inferência}: não tenho o código do bloco PI\_D. O que os dados garantem é que (i) os picos acompanham as transições de 1 LSB da VP, com o sinal da derivada na VP, e (ii) são $\sim$10 vezes maiores do que o filtro $\mu=0{,}1$ permitiria. Isso indica que, no bloco usado, o filtro derivativo não está atuando como projetado (por exemplo, derivada calculada pela diferença entre amostras consecutivas do scan, com $\mu T_d$ muito curto na prática, ou $K_d$ digitado em unidade diferente da esperada). \textbf{Confirme:} (a) os valores de $K_d$, $T_d$ e $\mu$ digitados; (b) o tempo de ciclo do PLC; (c) o código do bloco.\end{alerta}
-
-\subsection{Terceiro: por que o SO fica \emph{entre 10 e 99,9} e não entre $-\infty$ e $+\infty$}
-Os picos de dezenas de pontos são cortados pelos limites do SC, $\approx10\,\%$ e $\approx99{,}94\,\%$ (Seção~\ref{expdados}). Por isso o gráfico parece ``instável entre 0 e 99'': na verdade é entre \textbf{10 e 99,94}, os limites de saturação. O limite inferior em 10\,\% (e não 0\,\%) aparece no mínimo $9{,}99485$ de todos os arquivos.
-
-\subsection{Por que a planta ``não liga'' para os picos --- e por que ainda assim eles importam}
-O circuito RC é um filtro passa-baixa de 3ª ordem (polos em $1/68{,}7$; $1/16$; $1/10{,}4$ s$^{-1}$): um pico de 60 pontos que dura $\sim0{,}2$ s muda a VP em centésimos de ponto. Por isso a VP fica suave. Mesmo assim, os picos \textbf{importam}:
-\begin{enumerate}
-\item \textbf{Desgaste/inadequação do atuador:} o SO muda entre os limites em até 14\,\% das amostras (Q12: $13{,}9\,\%$ das amostras em 10\,\%).
-\item \textbf{Retificação pela saturação:} um pico para cima quando o SC médio está no limite inferior (10\,\%), ou para baixo no limite superior, \emph{desloca a média} aplicada. Exemplo (Q13b): no patamar em que o SC deveria estar fixo em 99,94\,\% o SO médio foi $96{,}6\,\%$; como $K\approx0{,}396$, isso reduz a VP máxima em $0{,}396\cdot3{,}3=1{,}3$ ponto ($VP_{max}=38{,}16$ medido, contra $39{,}39$ do patamar sem ruído, Q13a). Em outro exemplo, depois da queda do SP (Q13b, $t=550$--600 s), o SC deveria ficar em 10\,\% mas o SO médio ficou em $\approx25$--35\,\%, o que fez a VP cair mais devagar que na simulação.
-\item \textbf{Comparação SC experimental $\times$ simulado:} o SO bruto não é comparável com o SC simulado (que é a média). Por isso uso a mediana móvel nas figuras e quantifico a diferença.
-\end{enumerate}
-
-\subsection{É necessário trocar para um PI?}
-\textbf{Resposta direta: não é necessário para a \emph{estabilidade} (a malha já está estável), mas é a solução mais segura para eliminar o ruído do SC, e a simulação mostra que, para esta planta, a resposta quase não muda.}
-
-\textbf{Por quê?} A derivada compensa fase perto da frequência de cruzamento; aqui o atraso é pequeno em relação à constante de tempo ($t_0/\tau=25{,}9/78{,}0=0{,}33$) e a malha tem folga de fase de sobra. Na Tabela 7-4.1, o PI vem da \emph{mesma} dedução do PID (Dahlin com Padé de ordem zero, $e^{-t_0s}\approx1-t_0s$):
-\[
-C(s)=\frac{\tau s+1}{K\,s\,(\tau_c+t_0)}\ \Rightarrow\ K_c=\frac{\tau}{K(\tau_c+t_0)}=\frac{78{,}03}{0{,}3918\,(40+25{,}92)}=3{,}02\ \%\mathrm{SC}/\%\mathrm{VP},\qquad \tau_I=\tau=78{,}03\ \mathrm{s}.
-\]
-(Compare com o PID: $K_p=3{,}523$ e $T_i=90{,}99$ s.) Simulei os candidatos na FT completa (degrau $20\to30\,\%$; $\Delta t=0{,}05$ s):
-\begin{center}\small
-\resizebox{\textwidth}{!}{\begin{tabular}{lccccccc}\toprule Controlador & $PM$ & $GM$ & sobress. & $t_{63}$ & $t_s$ & pico SC & ganho HF $\to$ pontos de SC/LSB\\\midrule
-PID Dahlin, $\mu=0{,}1$ (usado) & $81{,}4^\circ$ & 59,7 & 0\,\% & 70 s & 172 s & 87,9\,\% & 38,8 $\to$ 3,8\\
-PID mesma sintonia, $\mu=0{,}5$ & $81{,}5^\circ$ & 16,0 & 0\,\% & 70 s & 178 s & 88,5\,\% & 10,6 $\to$ 1,0\\
-PID mesma sintonia, $\mu=1{,}0$ & $81{,}5^\circ$ & 10,9 & 0,1\,\% & 69 s & 185 s & 89,0\,\% & 7,0 $\to$ 0,7\\
-\textbf{PI Dahlin} ($K_c=3{,}02$; $T_i=78{,}03$) & $70{,}1^\circ$ & 9,5 & 0\,\% & 71 s & 145 s & 86,7\,\% & \textbf{3,0 $\to$ 0,3}\\\bottomrule\end{tabular}}\end{center}
-\begin{figure}[H]\centering\includegraphics[width=.98\textwidth]{figs_exp/pi_x_pid.png}\caption{Simulação (FT completa): PID Dahlin ($\mu=0{,}1$, usado), PID com $\mu=0{,}5$ e $1{,}0$, e PI Dahlin. As quatro respostas praticamente coincidem.}\end{figure}
-\begin{res}O PI de Dahlin dá praticamente a mesma VP ($t_{63}=71$ s contra 70 s; acomoda até mais rápido, 145 s contra 172 s), com $PM=70^\circ$ e $GM=9{,}5$ (folga confortável), e reduz o ganho de alta frequência de 38,8 para 3,0, isto é, \textbf{o efeito de 1 LSB no SC cai de 3,8 para 0,3 ponto (pelo menos 10 vezes menos), sem filtro nenhum}.\end{res}
-\textbf{Recomendação (para relatório e prova):}
-\begin{enumerate}
-\item \textbf{Manter o relatório do item 1.1 como PID} (é o que o enunciado pede: ``sintonia de PID segundo a Tabela 7-4.1'') e \emph{documentar} o ruído com esta análise (causa, evidência e solução).
-\item \textbf{Alternativa validada: PI de Dahlin} ($K_p=3{,}02$; $T_i=78{,}03$ s; $K_d=0$). É a resposta à pergunta ``precisa mudar para PI?'': não é obrigatório, mas \emph{funciona} e remove o ruído. Se for repetir o ensaio, \textbf{rode também um registro com PI} e confronte VP e SC (o SC do PI deve ficar limpo: desvio-padrão do SO próximo de 1 ponto, como a mediana atual).
-\item \textbf{Se quiser manter a derivada}: (a) aumente $\mu$ (0,5 a 1,0) \emph{somente se} o bloco realmente usar o filtro (verifique o código); (b) filtre a VP antes do PID (média de 8 leituras do ADC ou um passa-baixa digital com constante $\approx1$ s); (c) aumente o tempo de execução do bloco PID (por exemplo 0,5 s: o pico por LSB cai para $39{,}15\cdot0{,}0976/0{,}5=7{,}6$ pontos); (d) filtro RC analógico na entrada do ADC.
-\end{enumerate}
-\begin{just}\textbf{Como confirmar o diagnóstico rapidamente na bancada:} repita o item 1.1 com $K_d=0$ (PI). Se a causa é a derivada, o SO deixa de ter picos (SO bruto $\approx$ mediana). Se ainda tiver picos, a causa está em outro ponto (por exemplo, o termo P e o ruído muito alto do ADC); nesse caso meça o ruído do ADC com a saída fixa.\end{just}
-
-%------------------------------------------------------------------
-\section{Item 1.2 experimental (Q12): transferência manual$\to$automático sem VP-tracking}
+\section{Item 1.2 experimental (Q12): transferência manual$\to$automático sem VP-tracking}\label{expq12}
 \subsection{Objetivo (seção 5-3.3 do livro)}
 O \emph{bumpless VP-tracking} faz o SP acompanhar a VP enquanto o controlador está em manual. Assim, quando se passa para automático, $e=SP-VP=0$ e o SC não sofre salto. Sem o tracking, se o SP estiver diferente da VP no instante da transferência, o termo proporcional produz um salto $\Delta SC=K_p\,(SP-VP)$ (``bump'') e a VP é puxada bruscamente.
 \subsection{O que foi feito}
@@ -174,7 +105,7 @@ $SP-VP$ na transferência & $+8{,}29$ & $0{,}00$\\ Salto previsto $K_p(SP-VP)$ &
 \begin{res}O experimento reproduz o problema: sem VP-tracking, a transferência manual$\to$automático com $SP\neq VP$ produz um salto de SC igual a $K_p(SP-VP)$ ($+30$ pontos medido, $+29{,}2$ previsto). Com tracking (Q11), não há salto.\end{res}
 
 %------------------------------------------------------------------
-\section{Item 1.3 experimental (Q13a e Q13b): anti reset windup}
+\section{Item 1.3 experimental (Q13a e Q13b): anti reset windup}\label{expq13}
 \subsection{Fundamentos}
 \textbf{O que é o windup.} A ação integral soma o erro no tempo, $I=K_i\!\int e\,dt$. Quando o atuador satura (SC no limite), o erro não consegue ser zerado, e a integral \emph{continua crescendo}, ``carregando'' um valor muito maior do que o atuador pode usar. Quando o SP volta a um valor alcançável, o erro muda de sinal, mas a integral só decresce à taxa $K_i|e|$ --- demora até que $u=K_pe+I$ saia da saturação. Durante esse tempo, a VP fica fora do controle.
 
@@ -214,14 +145,3 @@ A estimativa independente da simulação (328 s) confere com o dado (337 s): o a
 \end{itemize}
 \begin{res}O experimento reproduz o problema do windup: sem anti-windup, depois de 449 s com o SP inalcançável, a VP fica \textbf{340 s} presa no valor máximo ($39{,}3\,\%$) e só atinge $20\pm1\,\%$ em $\approx700$ s; com anti-windup o SC sai da saturação na hora, a VP reage em 13 s (dinâmica da planta) e chega a $20\pm1\,\%$ em 123 s.\end{res}
 
-%------------------------------------------------------------------
-\section{Conclusões dos experimentos da Questão 1}
-\begin{enumerate}
-\item \textbf{Modelo validado no dia do ensaio:} inclinação estática $0{,}3963$ (teórico $0{,}3971$), offset de $-0{,}26$ ponto e dinâmica reproduzida com RMS de 0,2--0,8\,\% quando a planta é excitada com o SO medido.
-\item \textbf{Item 1.1:} a sintonia de Dahlin ($\tau_c=40$ s) funcionou: sem sobressinal significativo, erro nulo em regime, salto de SC igual a $K_p\Delta SP$. A resposta experimental é $\approx13\,\%$ mais lenta que a simulada ($t_{63}$ de 79 contra 70 s), coerente com a diferença de 4--6\,\% nas constantes de tempo já observada e com o ruído do SC.
-\item \textbf{SO ``instável'':} é \textbf{ruído no sinal de controle}, não instabilidade da malha: a derivada amplifica os degraus de 1 LSB (0,098\,\%) do ADC (probabilidade de pico 8,7 vezes maior nas transições da VP); os picos, de dezenas de pontos, são cortados pelos limites $\approx10$ e $\approx99{,}94\,\%$ do SC. O filtro $\mu=0{,}1$ deveria limitar o pico a $\approx3{,}4$ pontos, mas os picos observados são $\sim10$ vezes maiores: o filtro não atua como projetado no bloco usado.
-\item \textbf{PI:} não é obrigatório para a estabilidade, mas é a correção mais simples: o PI de Dahlin ($K_c=3{,}02$; $T_i=78{,}03$ s) dá VP praticamente idêntica ($t_{63}=71$ s, $PM=70^\circ$) com o ganho de alta frequência 13 vezes menor. Recomendo registrar um ensaio com PI para confirmar.
-\item \textbf{Item 1.2:} sem VP-tracking, o SC saltou $+30$ pontos na transferência (previsto $K_p(SP-VP)=29{,}2$); com tracking (Q11), não há salto.
-\item \textbf{Item 1.3:} sem anti-windup a VP fica presa em $39{,}3\,\%$ por $\approx340$ s depois da queda do SP, e só chega a $20\pm1\,\%$ em 700 s; com anti-windup, em 123 s. A simulação com a estrutura correta reproduz cada ensaio com RMS $\le1{,}6\,\%$.
-\end{enumerate}
-\textbf{Limitações:} (i) a sintonia usada (Dahlin) foi inferida do salto do SO, não de anotação; (ii) os picos de SO são amostrados a 1 s e portanto subestimados; (iii) o código do bloco PID não foi analisado, o que impede afirmar a causa exata do filtro derivativo ineficaz; (iv) só há um ensaio de cada tipo, sem repetição.

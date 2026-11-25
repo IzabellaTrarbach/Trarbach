@@ -1,12 +1,17 @@
 %==================== APÊNDICE: CÓDIGOS ====================
 \appendix
 \section{Códigos usados na comparação experimento $\times$ simulação}\label{apcodigos}
-Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \texttt{dados/}). Para reproduzir os números e as figuras da Seção~14 em diante, a partir da pasta \texttt{entrega/}: \texttt{python3 codigos/analise\_experimentos.py} (precisa de \texttt{numpy}, \texttt{scipy} e \texttt{matplotlib}).
+Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \texttt{dados/}). Para reproduzir os números e as figuras da Seção~14 em diante, a partir da pasta \texttt{entrega/}: \texttt{python3 codigos/analise\_experimentos.py} e \texttt{python3 codigos/analise\_plc.py} (precisam de \texttt{numpy}, \texttt{scipy} e \texttt{matplotlib}).
 \begin{center}\small\begin{tabular}{lp{10.5cm}}\toprule Arquivo & Função\\\midrule
 \texttt{load\_q.py} & Leitura do CSV do ScadaBR (formato longo) e alinhamento das 5 variáveis numa grade de 1 s\\
 \texttt{simexp.py} & Simulador de malha fechada (planta de 3ª ordem completa, PI\_D, saturação, anti-windup, offset)\\
 \texttt{analise\_experimentos.py} & Análise dos ensaios Q11, Q12, Q13a e Q13b: métricas, estatística do ruído, PI $\times$ PID e figuras\\
 \texttt{simula\_bancada.py} & Ferramenta de linha de comando para comparar \emph{qualquer} ensaio (RMS de VP e SC), com opções de $\alpha$, I\_PD, saturação, anti-windup e $R_p$\\
+\texttt{Prova2\_corrigido.st} & Programa corrigido (passa-baixa na VP, derivada armada em manual); diferença em \texttt{Prova2\_diff.txt}\\
+\texttt{plc\_corrigido/} & Projeto OpenPLC corrigido (\texttt{plc.xml} em FBD), \texttt{gerar\_projeto\_corrigido.py} (gera o \texttt{plc.xml} corrigido a partir do original) e \texttt{fbd\_para\_st.py} (traduz o diagrama para expressões, usado na conferência)\\
+\texttt{plc\_sim.py} & Simulador \emph{fiel ao programa do PLC} (scan de 20 ms, ADC de 10 bits com ruído, derivada de 4 pontos, \texttt{STOP\_INTGR}, \texttt{FF2GL})\\
+\texttt{analise\_plc.py} & Análise do ruído (histograma dos picos), comparação fiel ao PLC e correções (PI, passa-baixa)\\
+\texttt{Prova2.st} & Programa do OpenPLC usado na bancada (recebido do aluno)\\
 \texttt{compara\_malha.m} & Versão em MATLAB (estilo do script do professor), \textbf{não executada}\\\bottomrule\end{tabular}\end{center}
 \subsection{\texttt{load\_q.py}: leitura dos dados}
 \lstinputlisting[language=Python]{codigos/load_q.py}
@@ -14,7 +19,19 @@ Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \tex
 \lstinputlisting[language=Python]{codigos/simexp.py}
 \subsection{\texttt{analise\_experimentos.py}: análise dos ensaios}
 \lstinputlisting[language=Python]{codigos/analise_experimentos.py}
+\subsection{\texttt{Prova2.st}: programa do OpenPLC}
+\lstinputlisting[language={}]{codigos/Prova2.st}
+\subsection{\texttt{Prova2\_corrigido.st}: diferença em relação ao original}
+\lstinputlisting[language={}]{codigos/Prova2_diff.txt}
+\subsection{\texttt{plc\_sim.py}: simulador fiel ao PLC}
+\lstinputlisting[language=Python]{codigos/plc_sim.py}
+\subsection{\texttt{analise\_plc.py}: análise fiel ao PLC}
+\lstinputlisting[language=Python]{codigos/analise_plc.py}
 \subsection{\texttt{simula\_bancada.py}: comparação genérica}
 \lstinputlisting[language=Python]{codigos/simula_bancada.py}
 \subsection{\texttt{compara\_malha.m}: versão MATLAB}
 \lstinputlisting[language=Matlab]{codigos/compara_malha.m}
+\subsection{\texttt{gerar\_projeto\_corrigido.py}: edição do diagrama}
+\lstinputlisting[language=Python]{plc_corrigido/gerar_projeto_corrigido.py}
+\subsection{\texttt{fbd\_para\_st.py}: conferência do diagrama}
+\lstinputlisting[language=Python]{plc_corrigido/fbd_para_st.py}

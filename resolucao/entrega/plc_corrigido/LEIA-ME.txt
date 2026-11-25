@@ -1,0 +1,21 @@
+PROJETO OPENPLC CORRIGIDO (derivada filtrada)
+=============================================
+Pasta: PI_DtwoGL_prll_uno_beta_corrigido/  (plc.xml em diagrama de blocos + beremiz.xml)
+Origem: PI_DtwoGL_prll_uno_beta (projeto original recebido). A pasta build/ foi omitida: o editor a regenera.
+
+O que mudou no diagrama
+ 1. Rede nova (parte inferior do diagrama, comentario "FILTRO PASSA-BAIXA NA VP"):
+    VP_F = SEL(MF, VP_PERC, VP_F + kf_VP*(VP_PERC - VP_F))      kf_VP = 0.017699 = 0.02/(1.11+0.02)
+ 2. A derivada agora usa VP_F no lugar de VP_PERC (bloco MUL com -1.0, VP_F, kd, M_ACAO).
+ 3. Removido o SEL(MF, 0.0, ...) da derivada: ela fica "armada" tambem em manual (sem pulso ao fechar a malha).
+ 4. Variaveis novas: VP_F (REAL, 0.0) e kf_VP (REAL, 0.017699).
+Todo o resto (kp, ki, kd, alfa, STOP_INTGR, LIMIT, VP-tracking, FF2GL) esta igual.
+
+Como usar
+ - OpenPLC Editor: Arquivo > Abrir pasta... > PI_DtwoGL_prll_uno_beta_corrigido ; Build ; confirmar que nao ha erro ; carregar no Arduino.
+ - NAO foi possivel abrir o projeto no editor nem compilar com o matiec no ambiente onde foi gerado; a conferencia foi
+   feita por script (fbd_para_st.py): so Kd_VP_PERC e VP_F diferem do original.
+ - Se o editor recusar o arquivo ou as linhas de conexao ficarem estranhas, use Prova2_corrigido.st como referencia e refaca a rede.
+
+Para ruido ainda menor / outros ajustes: ver entrega/Resolucao_Prova2_entrega.pdf, secao "O programa corrigido".
+Regenerar o plc.xml corrigido: python3 gerar_projeto_corrigido.py <plc.xml original> <plc.xml saida>
