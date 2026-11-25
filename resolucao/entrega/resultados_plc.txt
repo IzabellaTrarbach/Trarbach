@@ -1,0 +1,18 @@
+== 1) Picos do SO (nao saturados) em unidades de Kd*LSB/(10*Ts) = 19.11 pontos: n=295
+   contagem por multiplo inteiro: {-4: 0, -3: 17, -2: 2, -1: 87, 0: 0, 1: 88, 2: 21, 3: 78, 4: 2} | fracao em +-0.15 de um inteiro: 1.00 (acaso: 0.30)
+== 2) Q11 (item 1.1): experimento x simulacao fiel ao PLC
+   EXPERIMENTO                          SO medio(ult.300 s) 75.4 | sd(SO) 17.3 | picos 0.20 | t63 79 s
+   PLC original (Kd=39,16 sem filtro)   SO medio(ult.300 s) 76.1 | sd(SO) 16.9 | picos 0.25 | t63 77 s | VP RMS x exp 0.11
+   PI de Dahlin (Kp=3,021; Kd=0)        SO medio(ult.300 s) 76.1 | sd(SO) 0.1 | picos 0.00 | t63 71 s | VP RMS x exp 0.43
+   PID + passa-baixa na VP (tau=1,11 s) SO medio(ult.300 s) 76.1 | sd(SO) 0.3 | picos 0.00 | t63 70 s | VP RMS x exp 0.37
+   Sensibilidade ao ruido do ADC (PLC original):
+   sigma = 0.00 LSB                     SO medio(ult.300 s) 76.5 | sd(SO) 2.7 | picos 0.01 | t63 70 s | VP RMS x exp 0.37
+   sigma = 0.10 LSB                     SO medio(ult.300 s) 75.6 | sd(SO) 15.0 | picos 0.18 | t63 74 s | VP RMS x exp 0.21
+   sigma = 0.15 LSB                     SO medio(ult.300 s) 76.1 | sd(SO) 16.9 | picos 0.25 | t63 77 s | VP RMS x exp 0.11
+   sigma = 0.20 LSB                     SO medio(ult.300 s) 75.3 | sd(SO) 21.6 | picos 0.39 | t63 80 s | VP RMS x exp 0.21
+   sigma = 0.30 LSB                     SO medio(ult.300 s) 73.3 | sd(SO) 26.1 | picos 0.55 | t63 92 s | VP RMS x exp 0.61
+== 3) Q12 (item 1.2): auto em t=593 (SO manual 20; SP=16; VP=7,71)
+   SO (mediana 595-615): exp 50.2  sim 51.9 | VP RMS x exp 0.22 | SO nos 3 primeiros scans (derivada zerada em manual): [10.  10.  10.  49.2]
+== 4) Q13a (sem STOP_INTGR) e Q13b (com STOP_INTGR)
+   Q13a: SO medio no patamar exp 99.9 sim 100.0 | VPmax exp 39.33 sim 39.38 | SO sai da saturacao exp 337 s sim 325 s | VP em 20+-1: exp 700 s sim 681 s | VP RMS 0.44
+   Q13b: SO medio no patamar exp 96.6 sim 96.5 | VPmax exp 38.16 sim 38.35 | SO sai da saturacao exp 0 s sim 0 s | VP em 20+-1: exp 123 s sim 101 s | VP RMS 0.63

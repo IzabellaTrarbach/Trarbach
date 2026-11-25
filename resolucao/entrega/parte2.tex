@@ -5,6 +5,7 @@
 $\displaystyle U(s)=\Big(K_p+\frac{K_i}{s}\Big)\big(R(s)-Y(s)\big)-D(s)\,Y(s),\qquad D(s)=\frac{K_d\,s}{\mu T_d\,s+1},\qquad K_i=\frac{K_p}{T_i},\ K_d=K_pT_d .$
 \end{formula}
 Aqui $R=SP$, $Y=VP$, $U=SC$ (sinal de controle). \begin{just}A ação proporcional e a integral atuam sobre o erro $e=SP-VP$; a derivada atua \emph{só sobre a VP} (e não sobre o erro) para não derivar os degraus do SP (``chute derivativo''). O filtro de constante $\mu T_d$ ($\mu=0{,}1$) limita o ganho do termo derivativo em alta frequência a $K_p(1+1/\mu)$ (a derivada pura amplificaria o ruído do ADC). É essa a implementação do OpenPLC citada no enunciado.\end{just}
+\begin{alerta}\textbf{Nota sobre o programa real do PLC.} O programa \texttt{Prova2.st} usado na bancada \emph{não} tem o filtro $\mu T_d$: a derivada é a de 4 pontos do bloco \texttt{DERIVATIVE} (20 ms), sem filtro. As simulações desta parte (seções 7 a 13) usam o filtro $\mu=0{,}1$ \emph{de projeto}; a análise do efeito dessa diferença está na Seção~\ref{expruido}.\end{alerta}
 
 \subsection{Funções de transferência de malha fechada}
 Sendo $Y=GU$ e $PI(s)=K_p+K_i/s$:
@@ -132,7 +133,7 @@ $SC_{final}=SP_1/K$: $30/0{,}3918=76{,}6$ (FOPDT) e $30/0{,}3971=75{,}5$ (comple
 
 \textbf{Margens da malha aberta $L=(PI+D)G$:} FOPDT: $GM=3{,}7$ (11,4 dB), $PM=78{,}4^\circ$; FT completa: $GM=59{,}7$ (35,5 dB), $PM=81{,}4^\circ$. A margem de fase é praticamente igual nos dois modelos; a margem de ganho da FOPDT é muito menor, como visto na Seção 6.2.
 \begin{just}Os dois modelos concordam no formato e na escala de tempo da VP. A FOPDT mostra um pequeno sobressinal e um pico de SC maior (94 contra 88\,\%) porque seu atraso puro e o ganho um pouco diferente alteram a ação proporcional+derivativa.\end{just}
-\begin{res}\textbf{Experimento realizado (arquivo \texttt{Q11.csv}).} Procedimento: manual com $SO=50\,\%$ ($VP=19{,}4\,\%$), malha fechada com $SP=VP$ e degrau $19{,}5\to30\,\%$. Resultado: sem sobressinal significativo, erro nulo em regime, salto do SC de $37{,}0$ pontos (previsto $K_p\Delta SP=36{,}9$), VP experimental $\times$ simulada com RMS de $0{,}38\,\%$. O sinal \texttt{SO} apresenta picos por ruído da derivada. Análise completa na Seção~\ref{expdados} e seguintes (Seções~14 a 19).\end{res}
+\begin{res}\textbf{Experimento realizado (arquivo \texttt{Q11.csv}).} Procedimento: manual com $SO=50\,\%$ ($VP=19{,}4\,\%$), malha fechada com $SP=VP$ e degrau $19{,}5\to30\,\%$. Resultado: sem sobressinal significativo, erro nulo em regime, salto do SC de $37{,}0$ pontos (previsto $K_p\Delta SP=36{,}9$), VP experimental $\times$ simulada com RMS de $0{,}38\,\%$. O sinal \texttt{SO} apresenta picos por ruído da derivada. Análise completa na Seção~\ref{expdados} e seguintes (Seções~14 a 20).\end{res}
 
 %------------------------------------------------------------------
 \section{Item 2.1: PID 2GL (método do $\alpha$ de Juliana Dalmaso)}
@@ -170,13 +171,14 @@ PI\_D regulatório ($\tau_c=20$) & 2,7 & 51,5 & 114 & 17,6\\
 2GL $\alpha=0{,}70$ & 0,0 & 111,4 & 78,0 & 1,67\\
 2GL $\alpha=0{,}99$ & 0,0 & 141,3 & 76,6 & 9,63\\
 \textbf{2GL $\alpha=0{,}64$} & 0,0 & 104,5 & 80,7 & \textbf{0,31}\\\bottomrule\end{tabular}\end{center}
-O mínimo ocorre em $\alpha=0{,}64$ com $\varepsilon=0{,}31\,\%$.
+O mínimo ocorre em $\alpha=0{,}64$ com $\varepsilon=0{,}31\,\%$. (Todos os $\alpha$ desta seção são os do TCC/Omron, com $C_f=\frac{(1-\alpha)T_is+1}{T_is+1}$; ao digitar no programa, usar $\mathtt{alfa}=1-\alpha$, Seção~\ref{alfaplc}.)
 \begin{just}$\alpha=0{,}4$ ainda é rápido demais (RMS 6,6\,\%) e o SC chega a 93\,\%; $\alpha=0{,}99$ é lento demais (RMS 9,6\,\%, $t_{63}=141$ s). O valor $\alpha=0{,}7$ do TCC dá RMS 1,7\,\% e funciona, mas a varredura mostra que $\alpha=0{,}64$ reproduz ainda melhor a resposta servo (RMS 0,31\,\%), porque o $\alpha$ ótimo depende da planta (aqui, FOPDT com atraso; no TCC era um processo de 1ª ordem sem atraso). Adoto $\alpha=0{,}64$, mantendo a mesma metodologia do TCC (escolha por simulação do $\alpha$ que aproxima o servo, com SC menor que o do regulatório: pico de 81\,\% contra 114\,\%, que satura).\end{just}
 Com a FT completa: $t_{63}=102{,}6$ s e pico do SC de 75,5\,\%.
 
 \subsection{Parâmetros finais para o OpenPLC (PI\_D2GL)}
-\begin{res}$K_p=5{,}057$;\quad $K_i=0{,}05558\ \mathrm{s^{-1}}$ ($T_i=90{,}99$ s);\quad $K_d=56{,}21$ ($T_d=11{,}11$ s);\quad $\mu=0{,}1$;\quad $\alpha=0{,}64$ (filtro do SP com $\beta=1$ fixo, como no CLP Omron do TCC).\end{res}
-\begin{todo}Passar a automático com $SP=VP$ e os parâmetros acima; aplicar degrau de SP 20 $\to$ 30\,\%; gravar SO, SP, VP. Confrontar VP e SC com a simulação (FOPDT e FT completa). Se possível repetir com $\alpha=0$ (PI\_D regulatório comum) para mostrar o efeito de $\alpha$ (SC chegando a 114\,\%, isto é, saturando). Resultados: \underline{\hspace{6cm}}\end{todo}
+\begin{res}$K_p=5{,}057$;\quad $K_i=0{,}05558\ \mathrm{s^{-1}}$ ($T_i=90{,}99$ s);\quad $K_d=56{,}21$ ($T_d=11{,}11$ s);\quad $\alpha_{TCC}=0{,}64$ (filtro do SP com $\beta=1$ fixo, como no CLP Omron do TCC).\\
+\textbf{No programa \texttt{Prova2.st}:} \texttt{kp := 5.057}, \texttt{ki := 0.05558}, \texttt{kd := 56.21} e \textbf{\texttt{alfa := 0.36}}. O programa pondera o SP no termo proporcional com peso $b=\mathtt{alfa}$, que é equivalente ao filtro do TCC com $\mathtt{alfa}=1-\alpha_{TCC}$ (dedução na Seção~\ref{alfaplc}); $\mathtt{alfa}=1$ é o PI\_D comum.\end{res}
+\begin{todo}Passar a automático com $SP=VP$ e os parâmetros acima, com \texttt{alfa := 0.36} (\textbf{não 0,64}); aplicar degrau de SP 20 $\to$ 30\,\%; gravar SO, SP, VP. Confrontar VP e SC com a simulação (FOPDT e FT completa). Se possível repetir com \texttt{alfa := 1.0} (PI\_D regulatório comum) para mostrar o efeito de $\alpha$ (SC chegando a 114\,\%, isto é, saturando). Resultados: \underline{\hspace{6cm}}\end{todo}
 
 %------------------------------------------------------------------
 \section{Item 3.1: integral do erro mínimo (seção 7-2.3)}
@@ -272,15 +274,15 @@ Degrau de SP de 10 para 12\,\% em $t=50$ s (pequeno porque o ganho alto faria o 
 \begin{center}\small
 \begin{tabular}{lccccc}\toprule Sintonia & $K_p$ & $T_i$ [s] & $T_d$ [s] & $K_i=K_p/T_i$ & $K_d=K_pT_d$\\\midrule
 1.1 Dahlin ($\tau_c=40$ s) & 3,523 & 90,99 & 11,11 & 0,03872 & 39,15\\
-2.1 PI\_D2GL (regulatório $\tau_c=20$ s, $\alpha=0{,}64$) & 5,057 & 90,99 & 11,11 & 0,05558 & 56,21\\
+2.1 PI\_D2GL (regulatório $\tau_c=20$ s; $\alpha_{TCC}=0{,}64$ $\Rightarrow$ \texttt{alfa}$=0{,}36$ no programa) & 5,057 & 90,99 & 11,11 & 0,05558 & 56,21\\
 3.1 IAE ponto fixo (7-2.3) & 7,222 & 111,98 & 9,92 & 0,06449 & 71,63\\
 4.1 Ziegler--Nichols (7-1.1) & 28,65 & 43,03 & 6,885 & 0,6659 & 197,3\\\bottomrule\end{tabular}\end{center}
-Todos com $\mu=0{,}1$ (filtro derivativo $\mu T_d$), derivada na VP, $T_i$ e $T_d$ em segundos e $K_p$ em \%SC/\%VP.
+Derivada na VP; $T_i$ e $T_d$ em segundos e $K_p$ em \%SC/\%VP. Nos projetos usei $\mu=0{,}1$, mas \textbf{o programa real não tem esse filtro} (Seção~\ref{secst}). A coluna $\alpha$ da tabela é o $\alpha$ do TCC; no programa, \texttt{alfa}$=1-\alpha$ ($0{,}36$ para o item 2.1; \texttt{alfa}$=0$ para o I\_PD do item 4.2).
 
 \section{Conclusões}
 \begin{itemize}
 \item As FTs completas, deduzidas das equações dos nós com os $R$ e $C$ medidos, têm três polos reais ($\tau=68{,}7$; $16{,}0$; $10{,}4$ s) e reproduzem o degrau experimental com RMS de 0,7--1,7\,\% do degrau.
 \item $\Vc1$ é curva tipo C ($\tau=23{,}3$ s, sem atraso); $\Vc2$ e $\Vc3$ são tipo S (Smith: $\Vc3$: $K=0{,}392$, $\tau=78{,}0$ s, $t_0=25{,}9$ s).
 \item A FOPDT mantém a margem de fase da malha aberta (diferenças de até $6^\circ$ para $K_c\le5$) e subestima a margem de ganho (é conservadora). Por isso as sintonias dos itens 1.1, 2.1 e 3.1 são calculadas com a FOPDT (como pede o enunciado), enquanto $K_{cu}$ e $T_u$ do item 4.1 devem vir da planta real.
-\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa). Os ensaios da Questão 1 (itens 1.1, 1.2 e 1.3) já foram realizados e analisados nas Seções 14 a 19; as comparações experimentais dos itens 2.1, 2.2, 3.1, 4.1 e 4.2 ficam para os ensaios correspondentes.
+\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa). Os ensaios da Questão 1 (itens 1.1, 1.2 e 1.3) já foram realizados e analisados nas Seções 14 a 20; as comparações experimentais dos itens 2.1, 2.2, 3.1, 4.1 e 4.2 ficam para os ensaios correspondentes.
 \end{itemize}
