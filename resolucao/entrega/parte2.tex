@@ -132,7 +132,7 @@ $SC_{final}=SP_1/K$: $30/0{,}3918=76{,}6$ (FOPDT) e $30/0{,}3971=75{,}5$ (comple
 
 \textbf{Margens da malha aberta $L=(PI+D)G$:} FOPDT: $GM=3{,}7$ (11,4 dB), $PM=78{,}4^\circ$; FT completa: $GM=59{,}7$ (35,5 dB), $PM=81{,}4^\circ$. A margem de fase é praticamente igual nos dois modelos; a margem de ganho da FOPDT é muito menor, como visto na Seção 6.2.
 \begin{just}Os dois modelos concordam no formato e na escala de tempo da VP. A FOPDT mostra um pequeno sobressinal e um pico de SC maior (94 contra 88\,\%) porque seu atraso puro e o ganho um pouco diferente alteram a ação proporcional+derivativa.\end{just}
-\begin{todo}Procedimento: (i) medir $R$ e $C$ e conferir $K$, $\tau$, $t_0$ pelo degrau em malha aberta; (ii) malha aberta com SO$=20/K\approx50{,}4\,\%$ até $\Vc3\approx20\,\%$; (iii) passar a automático com $SP=VP$ e os parâmetros acima (conferir se o bloco pede $K_p$, $K_i$, $K_d$ ou $K_p$, $T_i$, $T_d$); (iv) aplicar $SP$: 20 $\to$ 30\,\% e gravar SO, SP, VP. Confrontar VP exp.\ $\times$ simulada e SC exp.\ ($=$ SO) $\times$ simulado (figura acima). Resultados: \underline{\hspace{6cm}}\end{todo}
+\begin{res}\textbf{Experimento realizado (arquivo \texttt{Q11.csv}).} Procedimento: manual com $SO=50\,\%$ ($VP=19{,}4\,\%$), malha fechada com $SP=VP$ e degrau $19{,}5\to30\,\%$. Resultado: sem sobressinal significativo, erro nulo em regime, salto do SC de $37{,}0$ pontos (previsto $K_p\Delta SP=36{,}9$), VP experimental $\times$ simulada com RMS de $0{,}38\,\%$. O sinal \texttt{SO} apresenta picos por ruído da derivada. Análise completa na Seção~\ref{expdados} e seguintes (Seções~14 a 19).\end{res}
 
 %------------------------------------------------------------------
 \section{Item 2.1: PID 2GL (método do $\alpha$ de Juliana Dalmaso)}
@@ -282,5 +282,5 @@ Todos com $\mu=0{,}1$ (filtro derivativo $\mu T_d$), derivada na VP, $T_i$ e $T_
 \item As FTs completas, deduzidas das equações dos nós com os $R$ e $C$ medidos, têm três polos reais ($\tau=68{,}7$; $16{,}0$; $10{,}4$ s) e reproduzem o degrau experimental com RMS de 0,7--1,7\,\% do degrau.
 \item $\Vc1$ é curva tipo C ($\tau=23{,}3$ s, sem atraso); $\Vc2$ e $\Vc3$ são tipo S (Smith: $\Vc3$: $K=0{,}392$, $\tau=78{,}0$ s, $t_0=25{,}9$ s).
 \item A FOPDT mantém a margem de fase da malha aberta (diferenças de até $6^\circ$ para $K_c\le5$) e subestima a margem de ganho (é conservadora). Por isso as sintonias dos itens 1.1, 2.1 e 3.1 são calculadas com a FOPDT (como pede o enunciado), enquanto $K_{cu}$ e $T_u$ do item 4.1 devem vir da planta real.
-\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa); as comparações com o experimento, VP e SC, serão feitas após os ensaios na bancada (assim como os itens 1.2, 1.3, 2.2 e 4.2).
+\item Os quatro controladores foram simulados (VP e SC, FOPDT e FT completa). Os ensaios da Questão 1 (itens 1.1, 1.2 e 1.3) já foram realizados e analisados nas Seções 14 a 19; as comparações experimentais dos itens 2.1, 2.2, 3.1, 4.1 e 4.2 ficam para os ensaios correspondentes.
 \end{itemize}

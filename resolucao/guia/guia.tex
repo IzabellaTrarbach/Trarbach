@@ -10,6 +10,7 @@
 \usepackage{tcolorbox}
 \usepackage{enumitem}
 \usepackage{listings}
+\usepackage{graphicx}
 \usepackage{hyperref}
 \hypersetup{colorlinks=true,linkcolor=blue!50!black}
 \setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
@@ -19,6 +20,7 @@
 \newtcolorbox{dica}{colback=blue!4,colframe=blue!50!black,title=Dica / por que,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{esp}{colback=green!5,colframe=green!40!black,title=O que você deve ver (simulação),fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{alerta}{colback=red!5,colframe=red!60!black,title=Atenção,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
+\newtcolorbox{real}{colback=purple!5,colframe=purple!60!black,title=Resultado REAL da sua bancada,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \newtcolorbox{parm}{colback=orange!6,colframe=orange!60!black,title=Parâmetros,fonttitle=\bfseries\small,boxrule=.5pt,left=4pt,right=4pt,top=2pt,bottom=2pt}
 \lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,frame=single,columns=fullflexible,keepspaces=true,
  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c c}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {Á}{{\'A}}1 {É}{{\'E}}1}
@@ -28,7 +30,7 @@
 \begin{center}
 {\LARGE\bfseries Guia de estudo e roteiro de bancada}\\[4pt]
 {\Large Segunda Avaliação de Controle de Processos --- Circuito G ($\Vc3/\Vin$)}\\[6pt]
-Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR
+Prof.\ Saul da S.\ Munareto --- IFES Serra --- Arduino + OpenPLC + ScadaBR\\ (versão 3: inclui os resultados reais dos ensaios Q11, Q12 e Q13)
 \end{center}
 \begin{tcolorbox}[colback=gray!6,colframe=gray!60]
 \textbf{Para que serve.} \textbf{Parte I} = estudo (glossário de siglas e termos na Seção~\ref{gloss}, fórmulas, perguntas prováveis com explicações, exercícios). \textbf{Parte II} = passo a passo da bancada, item por item (1.1, 1.2, 1.3, 2.1, 2.2, 3.1, 4.1, 4.2), com os parâmetros prontos, o resultado esperado da simulação e o que gravar. Os números vêm da \emph{Resolução detalhada} (arquivo \texttt{Resolucao\_Prova2\_detalhada.pdf}); as simulações dos itens 1.2, 1.3, 2.2 e 4.2 foram feitas para este guia.\\
@@ -103,6 +105,13 @@ $t_s$ & Tempo de acomodação (entra e fica na faixa de $\pm2\,\%$).\\
 RMS & \emph{Root Mean Square}: raiz da média dos quadrados do erro; mede o erro ``típico'' entre dois sinais.\\
 Erro máximo & Maior diferença absoluta entre simulação e experimento.\\
 ADC & Conversor analógico-digital (10 bits $\Rightarrow$ 1024 níveis $\Rightarrow$ 0,098\,\% por nível).\\
+LSB & \emph{Least Significant Bit}: o menor degrau do ADC ($0{,}0976\,\%$ da escala). A VP medida muda em múltiplos de 1 LSB (``escada'').\\
+Ruído de quantização & Erro causado por a VP ser lida em degraus de 1 LSB. Quando derivado, vira picos no SC.\\
+Mediana móvel & Filtro que troca cada ponto pela mediana de uma janela (ex.\ 15 s); remove picos isolados e mantém o valor ``típico'' do SO.\\
+Retificação & Quando um sinal ruidoso é cortado pela saturação, a média muda (ex.: picos para cima em torno do limite inferior elevam a média do SC).\\
+Clamping & Forma de anti-windup: congela o integrador enquanto $u$ está saturado e o erro empurra para mais saturação.\\
+Offset & Deslocamento constante da saída: aqui $VP=0{,}3963\,SO-0{,}262$.\\
+Limites do SC reais & No seu OpenPLC o SO ficou sempre entre $\approx10\,\%$ e $\approx99{,}94\,\%$ ($=100\cdot1023/1024$), e não em 0--100.\\
 PWM & Modulação por largura de pulso (forma do Arduino gerar tensão ``analógica'').\\
 \multicolumn{2}{l}{\textbf{Ferramentas e documentos}}\\
 OpenPLC & Software de CLP (controlador lógico) que roda o PID no Arduino/ESP.\\
@@ -260,6 +269,64 @@ Todos com $\mu=0{,}1$. \textbf{Se na bancada o $K_{cu}$ e o $T_u$ medidos forem 
 \item $SC$ em regime para $SP=35\,\%$? \emph{Resp.:} $35/0{,}3918=89{,}3\,\%$ (ainda $<100$: alcançável). Para $SP=45$: $114{,}9\,\%$ $\Rightarrow$ satura.
 \end{enumerate}
 
+\section{Lições dos ensaios reais (Q11, Q12, Q13): o SO ``instável'' e quando usar PI}\label{licoes}
+\textbf{Resumo em uma frase:} o SO que pula entre $\approx10\,\%$ e $\approx99{,}9\,\%$ \emph{não é instabilidade da malha}: é \textbf{ruído de quantização do ADC amplificado pela derivada}, cortado pelos limites do SC. A malha está estável (VP suave, SO médio correto).
+
+\subsection{O que os seus dados mostram (evidências)}
+\begin{enumerate}
+\item \textbf{A VP é suave} (desvio-padrão de 0,13 ponto em regime) e o \textbf{SO médio é o correto}: $(SP-\text{offset})/K=(30+0{,}26)/0{,}3971=76{,}2\,\%$ contra 75,4 medido.
+\item \textbf{A mediana do SO é estável} (desvio-padrão da mediana móvel: 1,2 ponto; do SO bruto: 17,5).
+\item \textbf{Os picos são raros e isolados:} 89,6\,\% das amostras da Q11 em malha fechada estão \emph{entre} os limites; só 2,4\,\% em 10\,\% e 8,0\,\% em 99,9\,\%.
+\item \textbf{Os picos acompanham a VP mudar 1 LSB:} probabilidade de pico 0,52 quando a VP muda 1 LSB, contra 0,06 sem mudança (8,7 vezes maior). Quando a VP sobe 1 LSB, o SO cai em média 26 pontos; quando desce, sobe 13 --- o sinal da derivada \emph{sobre a VP}.
+\item \textbf{Ocorre com o erro zero:} logo após fechar a malha com $SP=VP$ (Q11, $t=1606$--1650) o SO já pula (\texttt{50, 50, 10, 99,9, 50\ldots}).
+\end{enumerate}
+\subsection{Por que a derivada faz isso (explicado)}
+\begin{itemize}
+\item O ADC de 10 bits dá degraus de $0{,}0976\,\%$. A VP real varia devagar, então a leitura é uma \textbf{escada}: constante por segundos, depois muda 1 LSB de uma vez.
+\item A derivada de uma escada é uma \textbf{sequência de impulsos}. O termo derivativo filtrado, $\dfrac{K_ds}{\mu T_ds+1}$, responde a um degrau $\Delta V$ com pico $\dfrac{K_d\Delta V}{\mu T_d}$. Com $K_d=39{,}15$, $\mu T_d=1{,}11$ s e $\Delta V=0{,}0976$: pico previsto $=3{,}4$ pontos. Ganho em alta frequência $K_p(1+1/\mu)=38{,}8$.
+\item \textbf{Mas o pico observado é $\sim10$ vezes maior} (mediana 21 pontos, muitos saturando). Se o pico de 1 LSB é $K_d\Delta V/T_{ef}\gtrsim26$ pontos, então $T_{ef}\lesssim0{,}15$ s. Isso indica que, no bloco usado, o filtro derivativo \emph{não está atuando como projetado} (inferência: não temos o código do bloco). Uma derivada por diferença finita com ciclo de 0,1 s daria $39{,}15\cdot0{,}0976/0{,}1=38$ pontos.
+\item \textbf{Por que a VP não oscila:} o circuito é um filtro passa-baixa de 3ª ordem ($\tau\ge10$ s); picos de $\sim0{,}2$ s mudam a VP em centésimos de ponto.
+\item \textbf{Por que ``0 a 99'':} os picos são cortados pelos limites do SC: $\approx10\,\%$ (e não 0) e $\approx99{,}94\,\%$.
+\end{itemize}
+\subsection{Por que ainda assim importa}
+Retificação: o corte dos picos pelos limites \emph{desloca a média} do SC. Exemplo (Q13b): no patamar em que o SC deveria ficar em 99,94\,\%, o SO médio foi 96,6\,\%, e a VP máxima foi 38,2\,\% (e não 39,4\,\%). Também desgasta o atuador e dificulta comparar SC experimental com simulado (use a mediana móvel).
+\subsection{É necessário trocar para PI?}
+\textbf{Não é necessário para a estabilidade, mas é a correção mais simples, e a simulação mostra que quase não muda a resposta:}
+\begin{center}\small\resizebox{\textwidth}{!}{\begin{tabular}{lccccccc}\toprule Controlador (FT completa, 20$\to$30\,\%) & $PM$ & $GM$ & sobress. & $t_{63}$ & $t_s$ & pico SC & ganho HF $\to$ pts/LSB\\\midrule
+PID Dahlin, $\mu=0{,}1$ (usado) & $81{,}4^\circ$ & 59,7 & 0\,\% & 70 s & 172 s & 87,9\,\% & 38,8 $\to$ 3,8\\
+PID $\mu=0{,}5$ & $81{,}5^\circ$ & 16,0 & 0\,\% & 70 s & 178 s & 88,5\,\% & 10,6 $\to$ 1,0\\
+PID $\mu=1{,}0$ & $81{,}5^\circ$ & 10,9 & 0,1\,\% & 69 s & 185 s & 89,0\,\% & 7,0 $\to$ 0,7\\
+\textbf{PI Dahlin} ($K_c=3{,}02$; $T_i=78{,}03$) & $70{,}1^\circ$ & 9,5 & 0\,\% & 71 s & 145 s & 86,7\,\% & \textbf{3,0 $\to$ 0,3}\\\bottomrule\end{tabular}}\end{center}
+\begin{itemize}
+\item \textbf{De onde vem o PI da Tabela 7-4.1:} a mesma dedução de Dahlin com Padé de ordem zero ($e^{-t_0s}\approx1-t_0s$) dá $C=\dfrac{\tau s+1}{K s(\tau_c+t_0)}$, isto é, $K_c=\dfrac{\tau}{K(\tau_c+t_0)}=\dfrac{78{,}03}{0{,}3918\cdot65{,}92}=3{,}02$ e $\tau_I=\tau=78{,}03$ s.
+\item \textbf{Por que a derivada faz pouca falta aqui:} $t_0/\tau=0{,}33$ (atraso pequeno) e a margem de fase já é grande; a derivada só compensa fase perto do cruzamento.
+\item \textbf{Alternativas mantendo o PID:} aumentar $\mu$ (só adianta se o bloco realmente usa o filtro); filtrar a VP antes do PID (média de 8 leituras ou passa-baixa de $\approx1$ s); aumentar o tempo de execução do bloco (0,5 s $\Rightarrow$ pico de 7,6 pontos); filtro RC na entrada do ADC.
+\item \textbf{Teste que confirma o diagnóstico:} repita com $K_d=0$. Se os picos sumirem, a causa é a derivada.
+\end{itemize}
+\textbf{Como responder ao professor:} ``O SO oscila porque o PI\_D deriva a VP quantizada (1 LSB = 0,098\,\%); cada degrau do ADC vira um pico no SC, que é cortado pelos limites do bloco (10 e 99,9\,\%). A malha é estável: a VP é suave e o SO médio é o previsto. Mostrei por simulação que o PI de Dahlin dá a mesma VP com ganho de alta frequência 13 vezes menor.''
+
+\subsection{Perguntas novas, com respostas explicadas}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{O SO oscila entre 0 e 99: a malha é instável?}\\
+\textbf{Resposta:} não. Instabilidade faria a \emph{VP} oscilar crescendo. Aqui a VP é suave e o SO médio é o certo; os picos são ruído do ADC derivado.\\
+\emph{Explicando melhor:} em instabilidade (ex.\ Z--N com $K_{cu}$) a VP oscila com amplitude constante ou crescente. No seu caso, os picos acompanham as transições de 1 LSB da VP e existem até com o erro zero.
+\item \textbf{Como você provou que é a derivada?}\\
+\textbf{Resposta:} pela correlação entre picos e mudanças de 1 LSB na VP (0,52 contra 0,06) e pelo sinal oposto ao da variação da VP.\\
+\emph{Explicando melhor:} no PI\_D a derivada atua com sinal negativo sobre a VP; VP subindo 1 LSB $\Rightarrow$ SO cai (média $-26$), VP descendo $\Rightarrow$ SO sobe ($+13$). A parte proporcional não poderia gerar isso (1 LSB $\times\,K_p=0{,}34$ ponto).
+\item \textbf{Por que o SO fica entre 10 e 99,9?}\\
+\textbf{Resposta:} são os limites do SC no seu sistema; os picos são cortados nesses valores.\\
+\emph{Explicando melhor:} em todos os 4 arquivos o mínimo é 9,99485 e o máximo 99,940875 ($=100\cdot1023/1024$).
+\item \textbf{Precisa mudar para PI?}\\
+\textbf{Resposta:} não para estabilidade, mas é a solução mais simples; o PI de Dahlin dá a mesma VP e reduz o ruído em 13 vezes.\\
+\emph{Explicando melhor:} ver a tabela acima: $t_{63}$ 71 s contra 70 s, margem de fase $70^\circ$, ganho em alta frequência 3,0 contra 38,8.
+\item \textbf{O que é retificação e por que afeta a VP?}\\
+\textbf{Resposta:} cortar picos nos limites muda o valor médio do SC aplicado; o circuito responde à média, então a VP muda.\\
+\emph{Explicando melhor:} em Q13b o SO médio no patamar foi 96,6\,\% (e não 99,94), reduzindo a VP máxima em $0{,}396\cdot3{,}3=1{,}3$ ponto.
+\item \textbf{Mostre numericamente o efeito do windup.}\\
+\textbf{Resposta:} integral acumulada $\approx414$ pontos; para sair da saturação precisa chegar a 168; desce a 0,75 ponto/s $\Rightarrow$ 328 s (medido 337 s).\\
+\emph{Explicando melhor:} $I=20+K_i\sum(SP-VP)\Delta t$ durante os 449 s com SP=55; após a queda do SP, $K_pe=3{,}523\cdot(-19{,}3)=-68$, então $u<99{,}94$ exige $I<168$.
+\end{enumerate}
+
 \section{Erros comuns (pegadinhas)}
 \begin{itemize}
 \item Esquecer de \textbf{esperar o regime} antes do degrau: $\tau_1=68{,}7$ s $\Rightarrow$ espere $\ge7\tau_1\approx480$ s (8 min) na condição inicial.
@@ -356,6 +423,8 @@ Todos os itens seguem a mesma sequência:
 \begin{esp}VP sobe sem sobressinal relevante ($\le0{,}7\,\%$); $t_{63,2}\approx68$--70 s; acomodação ($\pm2\%$) $\approx170$ s. SC: salto de $+35$ pontos em $t=50$ s (de $\sim$51 para $\sim$86\,\%), pico 88--94\,\%, depois cai a $\sim$75,5--76,6\,\% (=$30/K$). Veja a figura da Seção 8 da Resolução (Fig.\ do item 1.1).\end{esp}
 \textbf{Se o resultado for diferente:} SC saturando em 100\,\% $\to$ degrau maior que o previsto. VP lenta demais $\to$ confira $K_p$. Oscilação $\to$ derivada mal parametrizada ($K_d$ errado).
 
+\begin{real}\textbf{Q11 (seu ensaio):} malha fechada em $t=1606$ s com $SP=VP=19{,}5$; degrau para 30 em $t=1654$ s. O SO saltou de $49{,}5$ para $86{,}5$ ($+37{,}0$; previsto $K_p\Delta SP=36{,}9$), o que confirma $K_p=3{,}53$. VP: sem sobressinal relevante ($VP_{max}=30{,}16$), erro nulo em regime, $t_{63}=79$ s (simulado 70 s), RMS VP $\times$ simulada $=0{,}38\,\%$. SC médio em regime 75,4\,\% (simulado 76,2). \textbf{Atenção:} o SO bruto tem picos entre $\approx10$ e $\approx99{,}9\,\%$; veja a Seção~\ref{licoes}.\end{real}
+
 \subsection{Item 1.2 --- Problema sem bumpless VP-tracking (seção 5-3.3)}
 \textbf{Ideia.} Mostrar que, ao passar de manual para automático com $SP\neq VP$, o SC dá um salto $K_p(SP-VP)$ (um ``bump'' no atuador e na VP). Com VP-tracking (SP seguindo a VP em manual), não há salto.
 \begin{parm}Use a sintonia do 1.1 ($K_p=3{,}523$, $T_i=90{,}99$, $T_d=11{,}11$). Manual: $SO=50{,}4\,\%$ ($VP\approx20\,\%$).\end{parm}
@@ -372,6 +441,8 @@ Parte A: no instante da transferência o SC salta de $50{,}4$ para $\approx85{,}
 \begin{dica}O salto observado depende de como o bloco inicializa o integrador (aqui supus que o integrador assume o valor do SC manual). Se o seu bloco zerar o integrador, o SC pode \emph{cair} ($\approx K_p\cdot e=35\,\%$) em vez de subir; descreva o que viu e explique: em ambos os casos há um \emph{bump} indesejado.\end{dica}
 \textbf{O que gravar:} SO, SP, VP em ambas as partes. \textbf{O que concluir:} sem tracking há um salto $=K_p(SP-VP)$ no SC (bump); com tracking, a transferência é suave.
 
+\begin{real}\textbf{Q12 (seu ensaio):} manual com $SO=20\,\%$, $VP=7{,}71$, SP deixado em 0 (sem tracking); operador pôs $SP=16$ e passou a automático em $t=593$ s. O SO saltou de $20$ para $\approx50$ (mediana $50{,}2$ entre 595 e 615 s; previsto $20+3{,}523\cdot8{,}29=49{,}2$). A VP subiu imediatamente (RMS $\times$ simulação $=0{,}24\,\%$). Na Q11 (com tracking, $SP=VP$) o SO continuou em $\approx50$: sem salto.\end{real}
+
 \subsection{Item 1.3 --- Problema sem anti reset windup (seção 5-3.4)}
 \textbf{Ideia.} Pedir um SP \emph{inalcançável} (acima de $K_3\cdot100\approx39{,}2\,\%$): o SC satura em 100\,\%, o erro persiste e o integrador acumula. Quando o SP volta a um valor alcançável, o integrador está ``carregado'' e a VP demora a responder.
 \begin{parm}Sintonia do 1.1. Sequência de SP: \textbf{25\,\% (regime)} $\to$ \textbf{45\,\%} (por $\sim$300 s) $\to$ \textbf{30\,\%}. SC saturado em 0--100\,\%.\end{parm}
@@ -386,6 +457,8 @@ Parte A: no instante da transferência o SC salta de $50{,}4$ para $\approx85{,}
 \begin{esp}\begin{figure}[H]\centering\includegraphics[width=.95\textwidth]{figs/g13.png}\end{figure}
 Sem anti-windup: depois do SP voltar a 30\,\%, o SC \emph{continua em 100\,\%} e a VP fica em $\approx39{,}5\,\%$ por mais de 100 s; só chega a $\pm0{,}5$ de 30\,\% cerca de \textbf{465 s} depois da mudança. Com anti-windup: o SC desce imediatamente e a VP chega a 30\,\% em $\approx$\textbf{74 s} (com um pequeno subsinal). (O tempo de recuperação sem proteção cresce com o tempo em que o SP ficou inalcançável.)\end{esp}
 \textbf{O que gravar:} SO (SC), SP e VP nas duas versões. \textbf{O que concluir:} windup = integrador acumulando durante a saturação; o atraso na saída da saturação.
+
+\begin{real}\textbf{Q13a (sem AW) e Q13b (com AW):} SP 55 (inalcançável por 449 s e 501 s) e depois 20. Sem anti-windup o SO ficou \textbf{337 s} em 99,94\,\% depois da queda do SP, a VP ficou em 39,3\,\% por $\approx340$ s e só chegou a $20\pm1\,\%$ em $\approx700$ s. Com anti-windup o SO saiu da saturação \textbf{imediatamente}, a VP começou a cair em 13 s (dinâmica da planta) e chegou a $20\pm1\,\%$ em 123 s. \textbf{Conta para explicar:} integral acumulada $\approx414$ pontos; para sair da saturação precisa $I<99{,}94-K_pe=99{,}94+68=168$; desce $K_i|e|=0{,}03872\cdot19{,}3=0{,}75$ ponto/s $\Rightarrow(414-168)/0{,}75=328$ s (medido: 337 s).\end{real}
 
 \subsection{Item 2.1 --- PID 2GL ($\alpha=0{,}64$)}
 \begin{parm}$K_p=5{,}057$;\ $K_i=0{,}05558$ ($T_i=90{,}99$);\ $K_d=56{,}21$ ($T_d=11{,}11$);\ $\mu=0{,}1$;\ $\alpha=0{,}64$.\quad Degrau de SP: \textbf{20 $\to$ 30\,\%}.\end{parm}
@@ -447,7 +520,7 @@ PI\_D: sobressinal $\approx65\,\%$, $t_{63}\approx21$ s, SC pula $\approx+57$ po
 \subsection{Exportar e preparar o CSV}
 \begin{enumerate}
 \item Gere o relatório CSV no ScadaBR (período do ensaio, aquisição 1 s).
-\item Os dados vêm \textbf{empilhados}: 5 variáveis $\times$ $N$ amostras (\texttt{SO, SP, VP, VP1, VP2}); o script divide por 5, como o do professor.
+\item O CSV real do ScadaBR é em formato ``longo'' (\texttt{Nome do data point, Tempo, Valor, \ldots}) e \textbf{cada variável tem um número diferente de linhas} (ex.: SO 2024, VP 2028). Por isso \textbf{não se pode dividir o arquivo por 5} como no script de exemplo do professor: os scripts desta pasta separam as variáveis pelo \emph{nome} e alinham numa grade de 1 s.
 \item Defina onde começa o trecho a comparar (use o parâmetro \texttt{--inicio} para cortar o período em manual). A simulação assume que no \textbf{primeiro ponto do trecho} a planta está em regime com $SC=SO(1)$.
 \end{enumerate}
 \subsection{Script em Python (testado) --- \texttt{simula\_bancada.py}}
@@ -464,18 +537,20 @@ python3 simula_bancada.py comparar MEUARQUIVO.csv --kp 3.523 --ti 90.99 --td 11.
 # Item 3.1:   --kp 7.222 --ti 111.98 --td 9.917
 # Item 4.1:   --kp 28.654 --ti 43.031 --td 6.885 --sat
 # Item 4.2:   --kp 28.654 --ti 43.031 --td 6.885 --modo I_PD --sat
-# Item 1.3:   --kp 3.523 --ti 90.99 --td 11.114 --sat [--aw clamp]
+# Item 1.3:   --kp 3.523 --ti 90.99 --td 11.114 --sat --aw none (Q13a)  |  --aw clamp (Q13b)
+# Exemplo real: python3 simula_bancada.py comparar Q11.csv --inicio 1605 --kp 3.523 --ti 90.99 --td 11.114 --sat --aw clamp
 \end{lstlisting}
 A saída traz o \textbf{RMS e o erro máximo} de VP e de SC e salva \texttt{comparacao.png} (VP exp.\ $\times$ sim.\ e SC exp.\ $\times$ sim.). \textbf{Edite $R$ e $C$ no topo do arquivo} se os seus valores medidos forem outros.
-\begin{alerta}A leitura do CSV foi testada só com um arquivo sintético no formato descrito (3ª coluna numérica, vírgula decimal, 5 variáveis empilhadas). Se o separador ou as colunas do seu arquivo forem diferentes, ajuste a função \texttt{le\_csv} (é curta). Em 1.2 (bumpless) não há simulação pronta: a comparação é qualitativa.\end{alerta}
+\begin{alerta}A leitura do CSV foi \textbf{testada com os seus arquivos reais} (Q11, Q12, Q13a, Q13b). Use \texttt{--sat} para aplicar os limites reais do SC (10 e 99,94\,\%; mudam com \texttt{--umin/--umax}) e \texttt{--aw clamp} ou \texttt{--aw none} para o anti-windup. O SC experimental é muito ruidoso: o script compara o SC simulado com a \textbf{mediana móvel} do SO (e mostra também o RMS do SO bruto). Em 1.2 (bumpless) a simulação com \texttt{--inicio} no instante da transferência reproduz o salto.\end{alerta}
 \subsection{Script MATLAB --- \texttt{compara\_malha.m} (estilo do professor)}
 Mesma lógica (planta completa, simulação discreta). \textbf{Não foi executado no MATLAB} (não disponível aqui); a lógica é a do Python acima. Teste primeiro com o caso 1.1 e confira se a simulação dá pico de SC $\approx88\,\%$.
 \begin{lstlisting}
-% Edite: Kp, Ti, Td, alpha, modo, sat, aw, Rp, tRp, inicio e o nome do CSV
-tablex=readtable('MALHAFECHADA.csv'); cellx=table2cell(tablex);
-matx=cell2mat(cellx(:,3)); div=size(matx,1)/5;      % igual ao do professor
-SO=matx(1:div); SP=matx(div+1:2*div); VP=matx(2*div+1:3*div);
-% ... (ver arquivo compara_malha.m: simulacao discreta + graficos + RMS)
+% Edite no topo: arquivo, inicio, R, C, Kp, Ti, Td, mu, alpha, modo, umin/umax, aw, Rp, tRp.
+% A leitura usa o formato REAL do ScadaBR (separa as variaveis pelo nome do ponto, grade de 1 s).
+T=readtable(arquivo,'Delimiter',',','Encoding','ISO-8859-1','VariableNamingRule','preserve','DecimalSeparator','.');
+nomes=strtrim(string(T{:,1})); tempo=datetime(string(T{:,2}),'InputFormat','yyyy/MM/dd HH:mm:ss'); valor=T{:,3};
+SO=serie(nomes,tempo,valor,'SO'); SP=serie(nomes,tempo,valor,'SP'); VP=serie(nomes,tempo,valor,'VP');
+% ... (ver scripts/compara_malha.m: simulacao discreta + graficos + RMS)
 \end{lstlisting}
 \subsection{Diferenças entre o script do professor e o meu}
 \begin{itemize}
@@ -509,6 +584,7 @@ SO=matx(1:div); SP=matx(div+1:2*div); VP=matx(2*div+1:3*div);
 VP$\approx0$ com SO alto & Terra não comum; entrada analógica no pino errado; capacitor com polaridade invertida.\\
 VP saturada em 100\,\% ou valores absurdos & Escala errada (0--1023 em vez de \%); ou mapeamento de pino trocado.\\
 Ruído de $\pm0{,}1$--0,2\,\% na VP & Normal (ADC 0,098\,\%); em Z--N o $K_d$ alto amplifica; confira $\mu$ e o aterramento.\\
+SO pula entre $\approx10$ e $\approx99{,}9\,\%$ com a VP suave & \textbf{Ruído de quantização amplificado pela derivada} (Seção~\ref{licoes}). Teste com $K_d=0$ (PI). Não é instabilidade da malha.\\
 SC ``treme'' muito (3.1, 4.1) & Ganho de alta frequência $K_p(1+1/\mu)$; use os valores da tabela; não aumente $K_d$.\\
 Resposta mais lenta/rápida que a simulação em $\sim$5--10\,\% & Tolerância de $R$, $C$; $K$ real $\ne$ teórico. Refaça a simulação com os valores medidos.\\
 Oscilação em 1.1/2.1/3.1 & $K_i$ ou $K_d$ digitados errado; o bloco usa $T_i$ em vez de $K_i$ (ou o contrário).\\

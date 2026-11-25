@@ -1,0 +1,20 @@
+%==================== APÊNDICE: CÓDIGOS ====================
+\appendix
+\section{Códigos usados na comparação experimento $\times$ simulação}\label{apcodigos}
+Todos os arquivos estão na pasta \texttt{codigos/} desta entrega (dados em \texttt{dados/}). Para reproduzir os números e as figuras da Seção~14 em diante, a partir da pasta \texttt{entrega/}: \texttt{python3 codigos/analise\_experimentos.py} (precisa de \texttt{numpy}, \texttt{scipy} e \texttt{matplotlib}).
+\begin{center}\small\begin{tabular}{lp{10.5cm}}\toprule Arquivo & Função\\\midrule
+\texttt{load\_q.py} & Leitura do CSV do ScadaBR (formato longo) e alinhamento das 5 variáveis numa grade de 1 s\\
+\texttt{simexp.py} & Simulador de malha fechada (planta de 3ª ordem completa, PI\_D, saturação, anti-windup, offset)\\
+\texttt{analise\_experimentos.py} & Análise dos ensaios Q11, Q12, Q13a e Q13b: métricas, estatística do ruído, PI $\times$ PID e figuras\\
+\texttt{simula\_bancada.py} & Ferramenta de linha de comando para comparar \emph{qualquer} ensaio (RMS de VP e SC), com opções de $\alpha$, I\_PD, saturação, anti-windup e $R_p$\\
+\texttt{compara\_malha.m} & Versão em MATLAB (estilo do script do professor), \textbf{não executada}\\\bottomrule\end{tabular}\end{center}
+\subsection{\texttt{load\_q.py}: leitura dos dados}
+\lstinputlisting[language=Python]{codigos/load_q.py}
+\subsection{\texttt{simexp.py}: simulador de malha fechada}
+\lstinputlisting[language=Python]{codigos/simexp.py}
+\subsection{\texttt{analise\_experimentos.py}: análise dos ensaios}
+\lstinputlisting[language=Python]{codigos/analise_experimentos.py}
+\subsection{\texttt{simula\_bancada.py}: comparação genérica}
+\lstinputlisting[language=Python]{codigos/simula_bancada.py}
+\subsection{\texttt{compara\_malha.m}: versão MATLAB}
+\lstinputlisting[language=Matlab]{codigos/compara_malha.m}

@@ -5,7 +5,7 @@ Uso:
   python3 simula_bancada.py autoteste
   python3 simula_bancada.py comparar arquivo.csv --kp 3.523 --ti 90.99 --td 11.114 [--alpha 0.64] [--modo I_PD]
                                                   [--sat] [--aw clamp] [--rp 133600 --rp-t 50]
-Tudo em % da escala (100 % = 5 V) e segundos. Planta: FT completa (modelo fisico, sem reducao)."""
+Os limites do SC no seu OpenPLC/Arduino foram observados em ~10 % e ~99,94 % (use --sat para aplica-los).\nTudo em % da escala (100 % = 5 V) e segundos. Planta: FT completa (modelo fisico, sem reducao)."""
 import sys, argparse, numpy as np
 from scipy.linalg import expm
 
@@ -20,7 +20,7 @@ def A_mat(gp=0.0):
 B_vec = np.array([g[0]/C[0], 0, 0])
 
 def simula(sp, so0, Kp, Ti, Td, dt=0.05, mu=0.1, alpha=0.0, modo='PI_D',
-           sat=False, aw='none', gp=0.0, gp_t=None, Kaw=1.0):
+           sat=False, aw='none', gp=0.0, gp_t=None, Kaw=1.0, umin=0.0, umax=100.0):
     """sp: vetor do SP (uma amostra por segundo). so0: SC inicial [%] (regime). Retorna t, VP, SC."""
     Ki, Kd, Tf = Kp/Ti, Kp*Td, mu*Td
     T = len(sp); n = int(T/dt); t = np.arange(n)*dt
@@ -40,9 +40,9 @@ def simula(sp, so0, Kp, Ti, Td, dt=0.05, mu=0.1, alpha=0.0, modo='PI_D',
         y = x[2]; xf += (1-np.exp(-dt/Tf))*(y-xf); der = Kd*(y-xf)/Tf
         e = spf - y
         u = (Kp*e + I - der) if modo == 'PI_D' else (I - Kp*y - der)
-        uc = min(max(u, 0), 100) if sat else u
+        uc = min(max(u, umin), umax) if sat else u
         if aw == 'clamp':
-            if not ((u > 100 and e > 0) or (u < 0 and e < 0)): I += Ki*e*dt
+            if not ((u > umax and e > 0) or (u < umin and e < 0)): I += Ki*e*dt
         elif aw == 'backcalc': I += (Ki*e + Kaw*(uc-u))*dt
         else: I += Ki*e*dt
         VP[k] = y; SC[k] = uc if sat else u
@@ -50,19 +50,29 @@ def simula(sp, so0, Kp, Ti, Td, dt=0.05, mu=0.1, alpha=0.0, modo='PI_D',
     return t, VP, SC
 
 def le_csv(nome):
-    """Mesma logica do script do professor: 5 variaveis empilhadas (SO,SP,VP,VP1,VP2) na 3a coluna."""
-    vals = []
-    for ln in open(nome, encoding='utf-8', errors='ignore'):
-        ln = ln.strip()
-        if not ln: continue
-        for sep in (';', '\t', ','):
-            if sep in ln: break
-        cols = ln.split(sep) if sep != ',' or ln.count(',') <= 2 else ln.split(',')
-        if len(cols) < 3: continue
-        try: vals.append(float(cols[2].replace(',', '.').replace('"', '')))
+    """Le o CSV do ScadaBR (formato real: 'Nome do data point,Tempo,Valor,Processado,Comentario').
+    Separa as variaveis pelo NOME (uno - SO, SP, VP, VP1, VP2), coloca todas numa grade de 1 s e
+    repete o ultimo valor nos instantes sem registro. Retorna SO, SP, VP, VP1, VP2 (vetores de mesmo tamanho)."""
+    import datetime as dtm
+    d = {}
+    for ln in open(nome, encoding='latin-1'):
+        p = ln.strip().split(',')
+        if len(p) < 3 or '-' not in p[0] or not p[0].startswith('uno'): continue
+        k = p[0].split('-')[1].strip()
+        try: d.setdefault(k, []).append((dtm.datetime.strptime(p[1], '%Y/%m/%d %H:%M:%S'), float(p[2].replace(',', '.'))))
         except ValueError: pass
-    m = np.array(vals); div = len(m)//5
-    return [m[i*div:(i+1)*div] for i in range(5)]      # SO, SP, VP, VP1, VP2
+    t0 = min(v[0][0] for v in d.values()); t1 = max(v[-1][0] for v in d.values()); n = int((t1 - t0).total_seconds()) + 1
+    out = []
+    for k in ('SO', 'SP', 'VP', 'VP1', 'VP2'):
+        a = np.full(n, np.nan)
+        for t, x in d[k]: a[int((t - t0).total_seconds())] = x
+        for i in range(1, n):
+            if np.isnan(a[i]): a[i] = a[i-1]
+        a[np.isnan(a)] = a[~np.isnan(a)][0]; out.append(a)
+    return out
+
+def mediana_movel(x, w=15):
+    h = w // 2; p = np.pad(x, (h, h), mode='edge'); return np.array([np.median(p[i:i+w]) for i in range(len(x))])
 
 def metricas(a, b):
     d = a - b; return np.sqrt(np.mean(d**2)), np.max(np.abs(d))
@@ -80,17 +90,17 @@ if __name__ == '__main__':
     ap.add_argument('--kp', type=float); ap.add_argument('--ti', type=float); ap.add_argument('--td', type=float)
     ap.add_argument('--mu', type=float, default=0.1); ap.add_argument('--alpha', type=float, default=0.0)
     ap.add_argument('--modo', default='PI_D'); ap.add_argument('--sat', action='store_true'); ap.add_argument('--aw', default='none')
-    ap.add_argument('--rp', type=float); ap.add_argument('--rp-t', type=float); ap.add_argument('--inicio', type=int, default=0)
+    ap.add_argument('--rp', type=float); ap.add_argument('--rp-t', type=float); ap.add_argument('--inicio', type=int, default=0); ap.add_argument('--umin', type=float, default=10.0); ap.add_argument('--umax', type=float, default=99.940875)
     a = ap.parse_args()
     if a.cmd == 'autoteste': autoteste(); sys.exit()
     SO, SP, VP, VP1, VP2 = [v[a.inicio:] for v in le_csv(a.csv)]
     gp = 1/a.rp if a.rp else 0.0
-    t, vps, scs = simula(SP, SO[0], a.kp, a.ti, a.td, mu=a.mu, alpha=a.alpha, modo=a.modo, sat=a.sat, aw=a.aw, gp=gp, gp_t=a.rp_t)
+    t, vps, scs = simula(SP, SO[0], a.kp, a.ti, a.td, mu=a.mu, alpha=a.alpha, modo=a.modo, sat=a.sat, aw=a.aw, gp=gp, gp_t=a.rp_t, umin=a.umin, umax=a.umax)
     idx = (np.arange(len(SO))/0.05).astype(int); idx = np.minimum(idx, len(vps)-1)
-    r1 = metricas(vps[idx], VP); r2 = metricas(scs[idx], SO)
-    print("VP: RMS %.2f %%, max %.2f %% | SC: RMS %.2f %%, max %.2f %%" % (*r1, *r2))
+    r1 = metricas(vps[idx], VP); r2 = metricas(scs[idx], SO); r3 = metricas(scs[idx], mediana_movel(SO, 15))
+    print("VP: RMS %.2f %%, max %.2f %% | SC bruto: RMS %.2f %%, max %.2f %% | SC (SO com mediana movel de 15 s): RMS %.2f %%, max %.2f %%" % (*r1, *r2, *r3))
     import matplotlib.pyplot as plt
     f, ax = plt.subplots(1, 2, figsize=(11, 3.5))
     ax[0].plot(SP, 'k:', label='SP'); ax[0].plot(VP, 'b', label='VP exp.'); ax[0].plot(t, vps, 'r--', label='VP sim.'); ax[0].legend(); ax[0].grid()
-    ax[1].plot(SO, 'b', label='SC exp. (SO)'); ax[1].plot(t, scs, 'r--', label='SC sim.'); ax[1].legend(); ax[1].grid()
+    ax[1].plot(SO, color='#9ecae1', lw=.7, label='SC exp. (SO bruto)'); ax[1].plot(mediana_movel(SO, 15), 'b', label='SO mediana 15 s'); ax[1].plot(t, scs, 'r--', label='SC sim.'); ax[1].legend(); ax[1].grid()
     plt.tight_layout(); plt.savefig('comparacao.png', dpi=150); print('salvo: comparacao.png')
